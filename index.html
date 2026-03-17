@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal Document Editor</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="desktop">
+    <div id="windows-container"></div>
+    <div id="terminal-panel">
+      <div id="terminal-output"></div>
+      <div id="terminal-input-row">
+        <span id="terminal-prompt">$ </span>
+        <input id="terminal-input" type="text" autocomplete="off" spellcheck="false" autofocus>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
