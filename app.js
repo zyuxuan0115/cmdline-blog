@@ -1,17 +1,30 @@
+// ─── Supabase ─────────────────────────────────────────────────────────────────
+
+const _supabase = supabase.createClient(
+  'https://emjhatsnkpvnszueetoi.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtamhhdHNua3B2bnN6dWVldG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjQ5MzMsImV4cCI6MjA4OTMwMDkzM30.P2V9k6GNHwl3s01USbL4U11PIMjYR2A_OjGnral7qY8'
+);
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 const docs = {};           // filename → { content, win }
 let cmdHistory = [];
 let historyIndex = -1;
 let zCounter = 100;
+let currentUser = null;   // currently logged-in Supabase user
+
+function docKey(name)  { return `doc:${currentUser ? currentUser.id : 'guest'}:${name}`; }
+function tagKey(name)  { return `doc-tags:${currentUser ? currentUser.id : 'guest'}:${name}`; }
+function docPrefix()   { return `doc:${currentUser ? currentUser.id : 'guest'}:`; }
+function tagPrefix()   { return `doc-tags:${currentUser ? currentUser.id : 'guest'}:`; }
 
 // ─── Tag Storage ──────────────────────────────────────────────────────────────
 
 function getTags(filename) {
-  try { return JSON.parse(localStorage.getItem(`doc-tags:${filename}`)) || []; } catch(_) { return []; }
+  try { return JSON.parse(localStorage.getItem(tagKey(filename))) || []; } catch(_) { return []; }
 }
 function saveTags(filename, tags) {
-  try { localStorage.setItem(`doc-tags:${filename}`, JSON.stringify(tags)); } catch(_) {}
+  try { localStorage.setItem(tagKey(filename), JSON.stringify(tags)); } catch(_) {}
 }
 function addFileTag(filename, tag) {
   const tags = getTags(filename);
@@ -32,12 +45,13 @@ function removeFileTag(filename, tag) {
 }
 function getFilesWithTag(tag) {
   const files = [];
+  const prefix = tagPrefix();
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('doc-tags:')) {
+      if (key && key.startsWith(prefix)) {
         const tags = JSON.parse(localStorage.getItem(key)) || [];
-        if (tags.includes(tag)) files.push(key.slice('doc-tags:'.length));
+        if (tags.includes(tag)) files.push(key.slice(prefix.length));
       }
     }
   } catch(_) {}
@@ -45,10 +59,11 @@ function getFilesWithTag(tag) {
 }
 function getAllTags() {
   const tagSet = new Set();
+  const prefix = tagPrefix();
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('doc-tags:')) {
+      if (key && key.startsWith(prefix)) {
         const tags = JSON.parse(localStorage.getItem(key)) || [];
         tags.forEach(t => tagSet.add(t));
       }
@@ -84,17 +99,20 @@ function printBanner() {
 const COMMANDS = {
   help() {
     print('Available commands:', 'info');
-    print('  create <filename>          — create a new document', 'muted');
-    print('  new    <filename>          — alias for create', 'muted');
-    print('  open   <filename>          — open / focus existing document', 'muted');
-    print('  close  <filename>          — close a document window', 'muted');
-    print('  list                      — list all open documents', 'muted');
-    print('  tag    <filename> <tag>   — add a tag to a document', 'muted');
-    print('  untag  <filename> <tag>   — remove a tag from a document', 'muted');
-    print('  tags   <tag>              — list all files under a tag', 'muted');
-    print('  tags                      — list all existing tags', 'muted');
-    print('  clear                     — clear terminal output', 'muted');
-    print('  help                      — show this message', 'muted');
+    print('  create   <filename>             — create a new document', 'muted');
+    print('  new      <filename>             — alias for create', 'muted');
+    print('  open     <filename>             — open / focus existing document', 'muted');
+    print('  close    <filename>             — close a document window', 'muted');
+    print('  list                           — list all open documents', 'muted');
+    print('  tag      <filename> <tag>      — add a tag to a document', 'muted');
+    print('  untag    <filename> <tag>      — remove a tag from a document', 'muted');
+    print('  tags     [tag]                 — list tags or files under a tag', 'muted');
+    print('  register <email> <password>    — create a new account', 'muted');
+    print('  login    <email> <password>    — sign in to your account', 'muted');
+    print('  logout                         — sign out', 'muted');
+    print('  whoami                         — show current logged-in user', 'muted');
+    print('  clear                          — clear terminal output', 'muted');
+    print('  help                           — show this message', 'muted');
   },
 
   create(args) {
@@ -135,10 +153,23 @@ const COMMANDS = {
   },
 
   list() {
-    const names = Object.keys(docs);
-    if (names.length === 0) { print('No open documents.', 'muted'); return; }
-    print(`Open documents (${names.length}):`, 'info');
-    names.forEach(n => print(`  • ${n}`, 'muted'));
+    const files = [];
+    const prefix = docPrefix();
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(prefix)) files.push(key.slice(prefix.length));
+      }
+    } catch(_) {}
+    files.sort();
+    if (files.length === 0) { print('No documents found.', 'muted'); return; }
+    print(`All documents (${files.length}):`, 'info');
+    files.forEach(n => {
+      const open = docs[n] ? ' [open]' : '';
+      const tags = getTags(n);
+      const tagStr = tags.length ? '  ' + tags.map(t => `#${t}`).join(' ') : '';
+      print(`  • ${n}${open}${tagStr}`, 'muted');
+    });
   },
 
   tag(args) {
@@ -179,6 +210,42 @@ const COMMANDS = {
     if (files.length === 0) { print(`No files tagged with #${tag}`, 'muted'); return; }
     print(`Files tagged #${tag} (${files.length}):`, 'info');
     files.forEach(f => print(`  • ${f}`, 'muted'));
+  },
+
+  async register(args) {
+    const parts = args.trim().split(/\s+/);
+    if (parts.length < 2 || !parts[1]) { print('Usage: register <email> <password>', 'error'); return; }
+    const [email, password] = parts;
+    print(`Registering ${email}…`, 'muted');
+    const { error } = await _supabase.auth.signUp({ email, password });
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    print(`Registered! Check your email (${email}) to confirm your account.`, 'success');
+  },
+
+  async login(args) {
+    const parts = args.trim().split(/\s+/);
+    if (parts.length < 2 || !parts[1]) { print('Usage: login <email> <password>', 'error'); return; }
+    const [email, password] = parts;
+    print(`Signing in…`, 'muted');
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    currentUser = data.user;
+    updatePrompt(data.user.email);
+    print(`Logged in as ${data.user.email}`, 'success');
+  },
+
+  async logout() {
+    const { error } = await _supabase.auth.signOut();
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    currentUser = null;
+    updatePrompt(null);
+    print('Logged out.', 'success');
+  },
+
+  async whoami() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) { print('Not logged in.', 'muted'); return; }
+    print(`Logged in as: ${user.email}`, 'info');
   },
 
   clear() {
@@ -461,13 +528,13 @@ function buildWindow(name) {
     saveTimer = setTimeout(() => {
       savedIndicator.textContent = 'saved ✓';
       // Store in localStorage
-      try { localStorage.setItem(`doc:${name}`, editor.value); } catch(_) {}
+      try { localStorage.setItem(docKey(name), editor.value); } catch(_) {}
     }, 800);
   });
 
   // Load from localStorage if exists
   try {
-    const saved = localStorage.getItem(`doc:${name}`);
+    const saved = localStorage.getItem(docKey(name));
     if (saved) {
       editor.value = saved;
       docs[name].content = saved;
@@ -510,7 +577,7 @@ function buildWindow(name) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fileExists(name) {
-  try { return localStorage.getItem(`doc:${name}`) !== null; } catch(_) { return false; }
+  try { return localStorage.getItem(docKey(name)) !== null; } catch(_) { return false; }
 }
 
 function makeTL(cls) {
@@ -584,8 +651,25 @@ function makeResizable(win, handle) {
   });
 }
 
+// ─── Auth Helpers ─────────────────────────────────────────────────────────────
+
+const promptEl = document.getElementById('terminal-prompt');
+
+function updatePrompt(email) {
+  promptEl.textContent = email ? `${email} $ ` : '$ ';
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 printBanner();
 updateHint();
 input.focus();
+
+// Restore existing session on page load
+_supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session) {
+    currentUser = session.user;
+    updatePrompt(session.user.email);
+    print(`Restored session: ${session.user.email}`, 'muted');
+  }
+});
