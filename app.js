@@ -44,9 +44,8 @@ const COMMANDS = {
   create(args) {
     const name = args.trim();
     if (!name) { print('Usage: create <filename>', 'error'); return; }
-    if (docs[name]) {
-      print(`"${name}" already exists — focusing window.`, 'info');
-      focusWindow(docs[name].win);
+    if (docs[name] || fileExists(name)) {
+      print(`Error: "${name}" already exists. Use  open ${name}  to open it.`, 'error');
       return;
     }
     openDocument(name);
@@ -58,11 +57,16 @@ const COMMANDS = {
   open(args) {
     const name = args.trim();
     if (!name) { print('Usage: open <filename>', 'error'); return; }
-    if (!docs[name]) {
-      print(`"${name}" not found. Use  create ${name}  to make it.`, 'error');
+    if (docs[name]) {
+      focusWindow(docs[name].win);
+      print(`Focused: ${name}`, 'success');
       return;
     }
-    focusWindow(docs[name].win);
+    if (!fileExists(name)) {
+      print(`Error: "${name}" does not exist. Use  create ${name}  to create it.`, 'error');
+      return;
+    }
+    openDocument(name);
     print(`Opened: ${name}`, 'success');
   },
 
@@ -361,6 +365,10 @@ function buildWindow(name) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fileExists(name) {
+  try { return localStorage.getItem(`doc:${name}`) !== null; } catch(_) { return false; }
+}
 
 function makeTL(cls) {
   const el = document.createElement('div');
