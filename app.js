@@ -1,9 +1,61 @@
 // ─── State ───────────────────────────────────────────────────────────────────
 
-const docs = {};           // filename → { content, window el }
+const docs = {};           // filename → { content, win }
 let cmdHistory = [];
 let historyIndex = -1;
 let zCounter = 100;
+
+// ─── Tag Storage ──────────────────────────────────────────────────────────────
+
+function getTags(filename) {
+  try { return JSON.parse(localStorage.getItem(`doc-tags:${filename}`)) || []; } catch(_) { return []; }
+}
+function saveTags(filename, tags) {
+  try { localStorage.setItem(`doc-tags:${filename}`, JSON.stringify(tags)); } catch(_) {}
+}
+function addFileTag(filename, tag) {
+  const tags = getTags(filename);
+  if (tags.includes(tag)) return false;
+  tags.push(tag);
+  saveTags(filename, tags);
+  if (docs[filename]) docs[filename].win._refreshTagBar();
+  return true;
+}
+function removeFileTag(filename, tag) {
+  const tags = getTags(filename);
+  const idx = tags.indexOf(tag);
+  if (idx === -1) return false;
+  tags.splice(idx, 1);
+  saveTags(filename, tags);
+  if (docs[filename]) docs[filename].win._refreshTagBar();
+  return true;
+}
+function getFilesWithTag(tag) {
+  const files = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('doc-tags:')) {
+        const tags = JSON.parse(localStorage.getItem(key)) || [];
+        if (tags.includes(tag)) files.push(key.slice('doc-tags:'.length));
+      }
+    }
+  } catch(_) {}
+  return files.sort();
+}
+function getAllTags() {
+  const tagSet = new Set();
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('doc-tags:')) {
+        const tags = JSON.parse(localStorage.getItem(key)) || [];
+        tags.forEach(t => tagSet.add(t));
+      }
+    }
+  } catch(_) {}
+  return [...tagSet].sort();
+}
 
 // ─── Terminal ─────────────────────────────────────────────────────────────────
 
@@ -32,13 +84,17 @@ function printBanner() {
 const COMMANDS = {
   help() {
     print('Available commands:', 'info');
-    print('  create <filename>   — create a new document', 'muted');
-    print('  new    <filename>   — alias for create', 'muted');
-    print('  open   <filename>   — open / focus existing document', 'muted');
-    print('  close  <filename>   — close a document window', 'muted');
-    print('  list               — list all open documents', 'muted');
-    print('  clear              — clear terminal output', 'muted');
-    print('  help               — show this message', 'muted');
+    print('  create <filename>          — create a new document', 'muted');
+    print('  new    <filename>          — alias for create', 'muted');
+    print('  open   <filename>          — open / focus existing document', 'muted');
+    print('  close  <filename>          — close a document window', 'muted');
+    print('  list                      — list all open documents', 'muted');
+    print('  tag    <filename> <tag>   — add a tag to a document', 'muted');
+    print('  untag  <filename> <tag>   — remove a tag from a document', 'muted');
+    print('  tags   <tag>              — list all files under a tag', 'muted');
+    print('  tags                      — list all existing tags', 'muted');
+    print('  clear                     — clear terminal output', 'muted');
+    print('  help                      — show this message', 'muted');
   },
 
   create(args) {
@@ -83,6 +139,46 @@ const COMMANDS = {
     if (names.length === 0) { print('No open documents.', 'muted'); return; }
     print(`Open documents (${names.length}):`, 'info');
     names.forEach(n => print(`  • ${n}`, 'muted'));
+  },
+
+  tag(args) {
+    const parts = args.trim().split(/\s+/);
+    if (parts.length < 2 || !parts[1]) { print('Usage: tag <filename> <tagname>', 'error'); return; }
+    const [filename, tag] = parts;
+    if (!fileExists(filename) && !docs[filename]) {
+      print(`Error: "${filename}" does not exist.`, 'error'); return;
+    }
+    if (addFileTag(filename, tag)) {
+      print(`Tagged "${filename}" with #${tag}`, 'success');
+    } else {
+      print(`"${filename}" already has tag #${tag}`, 'info');
+    }
+  },
+
+  untag(args) {
+    const parts = args.trim().split(/\s+/);
+    if (parts.length < 2 || !parts[1]) { print('Usage: untag <filename> <tagname>', 'error'); return; }
+    const [filename, tag] = parts;
+    if (removeFileTag(filename, tag)) {
+      print(`Removed #${tag} from "${filename}"`, 'success');
+    } else {
+      print(`"${filename}" does not have tag #${tag}`, 'error');
+    }
+  },
+
+  tags(args) {
+    const tag = args.trim();
+    if (!tag) {
+      const allTags = getAllTags();
+      if (allTags.length === 0) { print('No tags found.', 'muted'); return; }
+      print(`All tags (${allTags.length}):`, 'info');
+      allTags.forEach(t => print(`  #${t}`, 'muted'));
+      return;
+    }
+    const files = getFilesWithTag(tag);
+    if (files.length === 0) { print(`No files tagged with #${tag}`, 'muted'); return; }
+    print(`Files tagged #${tag} (${files.length}):`, 'info');
+    files.forEach(f => print(`  • ${f}`, 'muted'));
   },
 
   clear() {
@@ -258,6 +354,52 @@ function buildWindow(name) {
   toolbar.appendChild(uploadLabel);
   toolbar.appendChild(savedIndicator);
 
+  // ── Tag bar ──
+  const tagbar = document.createElement('div');
+  tagbar.className = 'doc-tagbar';
+
+  const tagPillsEl = document.createElement('div');
+  tagPillsEl.className = 'tag-pills';
+
+  const tagAddInput = document.createElement('input');
+  tagAddInput.className = 'tag-add-input';
+  tagAddInput.placeholder = '+ add tag';
+  tagAddInput.title = 'Type a tag name and press Enter';
+
+  tagbar.appendChild(tagPillsEl);
+  tagbar.appendChild(tagAddInput);
+
+  function refreshTagBar() {
+    tagPillsEl.innerHTML = '';
+    getTags(name).forEach(tag => {
+      const pill = document.createElement('span');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `#${tag} <button class="tag-pill-remove" title="Remove tag">×</button>`;
+      pill.querySelector('.tag-pill-remove').addEventListener('click', e => {
+        e.stopPropagation();
+        removeFileTag(name, tag);
+      });
+      tagPillsEl.appendChild(pill);
+    });
+  }
+
+  tagAddInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const tag = tagAddInput.value.trim().replace(/\s+/g, '-').replace(/^#+/, '');
+      tagAddInput.value = '';
+      if (!tag) return;
+      if (!addFileTag(name, tag)) {
+        print(`"${name}" already has tag #${tag}`, 'info');
+      } else {
+        print(`Tagged "${name}" with #${tag}`, 'success');
+      }
+    }
+  });
+
+  // Expose refresh so tag commands can update an open window
+  win._refreshTagBar = refreshTagBar;
+  refreshTagBar();
+
   // ── Content ──
   const content = document.createElement('div');
   content.className = 'doc-content';
@@ -280,6 +422,7 @@ function buildWindow(name) {
   // ── Assemble ──
   win.appendChild(titlebar);
   win.appendChild(toolbar);
+  win.appendChild(tagbar);
   win.appendChild(content);
   win.appendChild(resize);
 
