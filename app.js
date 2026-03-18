@@ -108,9 +108,9 @@ const COMMANDS = {
       return;
     }
     const vis = parts.includes('--public') ? 'public' : 'private';
-    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename: name, content: '', visibility: vis });
+    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename: name, content: '', visibility: vis, title: '' });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
-    openDocument(name, '', vis);
+    openDocument(name, '', vis, '', 'edit');
     print(`Created document: ${name} [${vis}]`, 'success');
   },
 
@@ -125,10 +125,10 @@ const COMMANDS = {
       print(`Focused: ${name}`, 'success');
       return;
     }
-    const { data, error } = await _supabase.from('documents').select('content, visibility').eq('user_id', currentUser.id).eq('filename', name).maybeSingle();
+    const { data, error } = await _supabase.from('documents').select('content, visibility, title').eq('user_id', currentUser.id).eq('filename', name).maybeSingle();
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
     if (!data) { print(`Error: "${name}" does not exist. Use  create ${name}  to create it.`, 'error'); return; }
-    openDocument(name, data.content, data.visibility);
+    openDocument(name, data.content, data.visibility, data.title || '', 'preview');
     print(`Opened: ${name}`, 'success');
   },
 
@@ -303,8 +303,8 @@ document.getElementById('terminal-panel').addEventListener('click', () => input.
 
 // ─── Document Windows ─────────────────────────────────────────────────────────
 
-function openDocument(name, content = '', visibility = 'private') {
-  const win = buildWindow(name, content, visibility);
+function openDocument(name, content = '', visibility = 'private', title = '', initialMode = 'edit') {
+  const win = buildWindow(name, content, visibility, title, initialMode);
   container.appendChild(win);
   docs[name] = { content, win, visibility };
   focusWindow(win);
@@ -344,7 +344,7 @@ function updateHint() {
 
 // ─── Window Builder ───────────────────────────────────────────────────────────
 
-function buildWindow(name, initialContent = '', initialVisibility = 'private') {
+function buildWindow(name, initialContent = '', initialVisibility = 'private', initialTitle = '', initialMode = 'edit') {
   const win = document.createElement('div');
   win.className = 'doc-window';
 
@@ -395,6 +395,28 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private') {
 
   titlebar.appendChild(lights);
   titlebar.appendChild(titleEl);
+
+  // ── Title input ──
+  const titleBar = document.createElement('div');
+  titleBar.className = 'doc-title-bar';
+
+  const titleInput = document.createElement('input');
+  titleInput.className = 'doc-title-input';
+  titleInput.type = 'text';
+  titleInput.placeholder = 'Untitled';
+  titleInput.value = initialTitle;
+  titleBar.appendChild(titleInput);
+
+  let titleSaveTimer;
+  titleInput.addEventListener('input', () => {
+    clearTimeout(titleSaveTimer);
+    titleSaveTimer = setTimeout(() => {
+      _supabase.from('documents')
+        .update({ title: titleInput.value })
+        .eq('user_id', currentUser.id).eq('filename', name)
+        .then(() => {});
+    }, 800);
+  });
 
   // ── Toolbar ──
   const toolbar = document.createElement('div');
@@ -510,6 +532,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private') {
 
   // ── Assemble ──
   win.appendChild(titlebar);
+  win.appendChild(titleBar);
   win.appendChild(toolbar);
   win.appendChild(tagbar);
   win.appendChild(content);
@@ -518,7 +541,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private') {
   // ─── Logic ───
 
   // Mode toggle
-  let mode = 'edit';
+  let mode = initialMode;
 
   function switchToEdit() {
     mode = 'edit';
@@ -558,11 +581,13 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private') {
     }, 800);
   });
 
-  // Load content passed in from Supabase
+  // Load content then apply initial mode (order matters — preview reads editor.value)
   if (initialContent) {
     editor.value = initialContent;
     savedIndicator.textContent = 'loaded ✓';
   }
+  if (initialMode === 'preview') switchToPreview();
+  else switchToEdit();
 
   // Image upload
   fileInput.addEventListener('change', () => {

@@ -271,6 +271,30 @@ body {
   white-space: nowrap;
 }
 
+/* Title bar */
+.doc-title-bar {
+  padding: 8px 16px 6px;
+  background: #fff;
+  border-bottom: 1px solid #ececec;
+  flex-shrink: 0;
+}
+
+.doc-title-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: transparent;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.doc-title-input::placeholder {
+  color: #ccc;
+  font-weight: 400;
+}
+
 /* Toolbar */
 .doc-toolbar {
   display: flex;
@@ -482,6 +506,7 @@ body {
 .tag-add-input:focus { color: #333; }
 
 /* Minimized state */
+.doc-window.minimized .doc-title-bar,
 .doc-window.minimized .doc-toolbar,
 .doc-window.minimized .doc-tagbar,
 .doc-window.minimized .doc-content,
