@@ -1,5 +1,5 @@
 {
-  "name": "terminal-based-blog-editor",
+  "name": "cmdline-blog",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
