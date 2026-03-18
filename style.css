@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Noto Serif SC', 'Segoe UI', system-ui, sans-serif;
   background: #070b14;
   height: 100vh;
   overflow: hidden;
@@ -287,7 +287,7 @@ body {
   font-weight: 600;
   color: #1a1a1a;
   background: transparent;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Noto Serif SC', 'Segoe UI', system-ui, sans-serif;
 }
 
 .doc-title-input::placeholder {
@@ -353,7 +353,7 @@ body {
   border: none;
   outline: none;
   resize: none;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Courier New', 'Noto Serif SC', Courier, monospace;
   font-size: 14px;
   line-height: 1.6;
   color: #1a1a1a;
@@ -369,6 +369,7 @@ body {
   font-size: 15px;
   line-height: 1.7;
   color: #1a1a1a;
+  font-family: 'Noto Serif SC', 'Segoe UI', system-ui, sans-serif;
 }
 
 .doc-preview.visible {

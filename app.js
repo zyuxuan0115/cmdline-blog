@@ -830,18 +830,26 @@ function updatePrompt(email) {
 
   function buildStars() {
     stars = [];
-    // Generate over a large fixed area so stars cover any viewport size
+    // Lock virtual coordinate space to the largest likely screen size
     const W = Math.max(canvas.width,  window.screen.availWidth  || 2560);
     const H = Math.max(canvas.height, window.screen.availHeight || 1440);
-    VW = W; VH = H; // lock the virtual coordinate space
-    const n = Math.min(Math.floor(W * H / 700), 3500);
+    VW = W; VH = H;
+
+    // Generate stars inside a circle (radius = half-diagonal of virtual rect).
+    // A circle rotated around its centre always looks the same — no empty corners.
+    const cx = VW / 2, cy = VH / 2;
+    const R  = Math.sqrt(VW * VW + VH * VH) / 2;
+    const n  = Math.min(Math.floor(Math.PI * R * R / 700), 5000);
     for (let i = 0; i < n; i++) {
-      const size = Math.random() < 0.04 ? Math.random() * 2 + 1.5   // bright giant
-                 : Math.random() < 0.15 ? Math.random() * 1 + 0.8   // medium
-                 : Math.random() * 0.6 + 0.2;                        // dim
+      const size = Math.random() < 0.04 ? Math.random() * 2 + 1.5
+                 : Math.random() < 0.15 ? Math.random() * 1 + 0.8
+                 : Math.random() * 0.6 + 0.2;
+      // Uniform distribution inside a circle
+      const angle = Math.random() * Math.PI * 2;
+      const r     = R * Math.sqrt(Math.random());
       stars.push({
-        x:      Math.random() * W,
-        y:      Math.random() * H,
+        x:      cx + r * Math.cos(angle),
+        y:      cy + r * Math.sin(angle),
         size,
         base:   Math.random() * 0.4 + (size > 1.5 ? 0.85 : 0.55),
         speed:  Math.random() * 1.2 + 0.2,
