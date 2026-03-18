@@ -15,8 +15,19 @@ let currentUser = null;   // currently logged-in Supabase user
 
 function docKey(name)  { return `doc:${currentUser ? currentUser.id : 'guest'}:${name}`; }
 function tagKey(name)  { return `doc-tags:${currentUser ? currentUser.id : 'guest'}:${name}`; }
+function visKey(name)  { return `doc-vis:${currentUser ? currentUser.id : 'guest'}:${name}`; }
 function docPrefix()   { return `doc:${currentUser ? currentUser.id : 'guest'}:`; }
 function tagPrefix()   { return `doc-tags:${currentUser ? currentUser.id : 'guest'}:`; }
+
+// ─── Visibility Storage ───────────────────────────────────────────────────────
+
+function getVisibility(name) {
+  try { return localStorage.getItem(visKey(name)) || 'private'; } catch(_) { return 'private'; }
+}
+function setVisibility(name, vis) {
+  try { localStorage.setItem(visKey(name), vis); } catch(_) {}
+  if (docs[name]) docs[name].win._refreshVisBtn();
+}
 
 // ─── Tag Storage ──────────────────────────────────────────────────────────────
 
@@ -107,6 +118,8 @@ const COMMANDS = {
     print('  tag      <filename> <tag>      — add a tag to a document', 'muted');
     print('  untag    <filename> <tag>      — remove a tag from a document', 'muted');
     print('  tags     [tag]                 — list tags or files under a tag', 'muted');
+    print('  publish  <filename>            — make a document public', 'muted');
+    print('  unpublish <filename>           — make a document private', 'muted');
     print('  register <email> <password>    — create a new account', 'muted');
     print('  login    <email> <password>    — sign in to your account', 'muted');
     print('  logout                         — sign out', 'muted');
@@ -116,14 +129,17 @@ const COMMANDS = {
   },
 
   create(args) {
-    const name = args.trim();
-    if (!name) { print('Usage: create <filename>', 'error'); return; }
+    const parts = args.trim().split(/\s+/);
+    const name = parts[0];
+    if (!name) { print('Usage: create <filename> [--public]', 'error'); return; }
     if (docs[name] || fileExists(name)) {
       print(`Error: "${name}" already exists. Use  open ${name}  to open it.`, 'error');
       return;
     }
+    const vis = parts.includes('--public') ? 'public' : 'private';
+    setVisibility(name, vis);
     openDocument(name);
-    print(`Created document: ${name}`, 'success');
+    print(`Created document: ${name} [${vis}]`, 'success');
   },
 
   new(args) { COMMANDS.create(args); },
@@ -166,9 +182,10 @@ const COMMANDS = {
     print(`All documents (${files.length}):`, 'info');
     files.forEach(n => {
       const open = docs[n] ? ' [open]' : '';
+      const vis = getVisibility(n) === 'public' ? ' [public]' : ' [private]';
       const tags = getTags(n);
       const tagStr = tags.length ? '  ' + tags.map(t => `#${t}`).join(' ') : '';
-      print(`  • ${n}${open}${tagStr}`, 'muted');
+      print(`  • ${n}${open}${vis}${tagStr}`, 'muted');
     });
   },
 
@@ -210,6 +227,22 @@ const COMMANDS = {
     if (files.length === 0) { print(`No files tagged with #${tag}`, 'muted'); return; }
     print(`Files tagged #${tag} (${files.length}):`, 'info');
     files.forEach(f => print(`  • ${f}`, 'muted'));
+  },
+
+  publish(args) {
+    const name = args.trim();
+    if (!name) { print('Usage: publish <filename>', 'error'); return; }
+    if (!fileExists(name) && !docs[name]) { print(`Error: "${name}" does not exist.`, 'error'); return; }
+    setVisibility(name, 'public');
+    print(`"${name}" is now public.`, 'success');
+  },
+
+  unpublish(args) {
+    const name = args.trim();
+    if (!name) { print('Usage: unpublish <filename>', 'error'); return; }
+    if (!fileExists(name) && !docs[name]) { print(`Error: "${name}" does not exist.`, 'error'); return; }
+    setVisibility(name, 'private');
+    print(`"${name}" is now private.`, 'success');
   },
 
   async register(args) {
@@ -412,6 +445,22 @@ function buildWindow(name) {
   fileInput.accept = 'image/*';
   uploadLabel.appendChild(fileInput);
 
+  const visBtn = document.createElement('button');
+  visBtn.className = 'toolbar-btn vis-btn';
+
+  function refreshVisBtn() {
+    const v = getVisibility(name);
+    visBtn.textContent = v === 'public' ? '🌐 Public' : '🔒 Private';
+    visBtn.title = v === 'public' ? 'Click to make private' : 'Click to make public';
+  }
+  refreshVisBtn();
+  visBtn.addEventListener('click', () => {
+    const next = getVisibility(name) === 'public' ? 'private' : 'public';
+    setVisibility(name, next);
+    print(`"${name}" is now ${next}.`, 'success');
+  });
+  win._refreshVisBtn = refreshVisBtn;
+
   const savedIndicator = document.createElement('span');
   savedIndicator.className = 'doc-saved';
 
@@ -419,6 +468,7 @@ function buildWindow(name) {
   toolbar.appendChild(btnPreview);
   toolbar.appendChild(divider);
   toolbar.appendChild(uploadLabel);
+  toolbar.appendChild(visBtn);
   toolbar.appendChild(savedIndicator);
 
   // ── Tag bar ──
