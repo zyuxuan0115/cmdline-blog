@@ -820,23 +820,28 @@ function updatePrompt(email) {
 
   let stars = [];
   const shooters = [];
+  let VW = 0, VH = 0; // fixed virtual dimensions, set once
 
+  // Resize only updates canvas dimensions — stars are never rebuilt
   function resize() {
     canvas.width  = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
-    buildStars();
   }
 
   function buildStars() {
     stars = [];
-    const n = Math.floor(canvas.width * canvas.height / 700);
+    // Generate over a large fixed area so stars cover any viewport size
+    const W = Math.max(canvas.width,  window.screen.availWidth  || 2560);
+    const H = Math.max(canvas.height, window.screen.availHeight || 1440);
+    VW = W; VH = H; // lock the virtual coordinate space
+    const n = Math.min(Math.floor(W * H / 700), 3500);
     for (let i = 0; i < n; i++) {
       const size = Math.random() < 0.04 ? Math.random() * 2 + 1.5   // bright giant
                  : Math.random() < 0.15 ? Math.random() * 1 + 0.8   // medium
                  : Math.random() * 0.6 + 0.2;                        // dim
       stars.push({
-        x:      Math.random() * canvas.width,
-        y:      Math.random() * canvas.height,
+        x:      Math.random() * W,
+        y:      Math.random() * H,
         size,
         base:   Math.random() * 0.4 + (size > 1.5 ? 0.85 : 0.55),
         speed:  Math.random() * 1.2 + 0.2,
@@ -862,8 +867,8 @@ function updatePrompt(email) {
 
   function draw(ts) {
     const t   = ts / 1000;
-    const cx  = canvas.width  / 2;
-    const cy  = canvas.height / 2;
+    const cx  = VW / 2;
+    const cy  = VH / 2;
     const rot = t * ROT_SPEED;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -881,9 +886,9 @@ function updatePrompt(email) {
     // Nebulae
     NEBULAE.forEach(n => {
       const [r, g, b] = n.color;
-      const nx = n.rx * canvas.width;
-      const ny = n.ry * canvas.height;
-      const radius = n.r * Math.min(canvas.width, canvas.height);
+      const nx = n.rx * VW;
+      const ny = n.ry * VH;
+      const radius = n.r * Math.min(VW, VH);
       const grd = ctx.createRadialGradient(nx, ny, 0, nx, ny, radius);
       grd.addColorStop(0,   `rgba(${r},${g},${b},0.13)`);
       grd.addColorStop(0.5, `rgba(${r},${g},${b},0.05)`);
@@ -942,6 +947,7 @@ function updatePrompt(email) {
 
   window.addEventListener('resize', resize);
   resize();
+  buildStars();
   // Spawn a shooter every ~1.2s; occasionally fire 2 at once
   setInterval(() => {
     spawnShooter();
