@@ -10,13 +10,23 @@
 </head>
 <body>
   <div id="desktop">
-    <div id="windows-container"></div>
+    <div id="main-area">
+      <div id="windows-container"></div>
+      <div id="help-sidebar">
+        <div id="help-sidebar-header">
+          <span>Commands</span>
+          <button id="help-sidebar-close" title="Close (help close)">✕</button>
+        </div>
+        <div id="help-sidebar-content"></div>
+      </div>
+    </div>
     <div id="terminal-panel">
       <div id="terminal-output"></div>
       <div id="terminal-input-row">
         <span id="terminal-prompt">$ </span>
         <input id="terminal-input" type="text" autocomplete="off" spellcheck="false" autofocus>
       </div>
+    </div>
     </div>
   </div>
   <script src="app.js"></script>

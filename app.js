@@ -90,24 +90,12 @@ function printBanner() {
 // ─── Command parsing ──────────────────────────────────────────────────────────
 
 const COMMANDS = {
-  help() {
-    print('Available commands:', 'info');
-    print('  create   <filename>             — create a new document', 'muted');
-    print('  new      <filename>             — alias for create', 'muted');
-    print('  open     <filename>             — open / focus existing document', 'muted');
-    print('  close    <filename>             — close a document window', 'muted');
-    print('  list                           — list all open documents', 'muted');
-    print('  tag      <filename> <tag>      — add a tag to a document', 'muted');
-    print('  untag    <filename> <tag>      — remove a tag from a document', 'muted');
-    print('  tags     [tag]                 — list tags or files under a tag', 'muted');
-    print('  publish  <filename>            — make a document public', 'muted');
-    print('  unpublish <filename>           — make a document private', 'muted');
-    print('  register <email> <password>    — create a new account', 'muted');
-    print('  login    <email> <password>    — sign in to your account', 'muted');
-    print('  logout                         — sign out', 'muted');
-    print('  whoami                         — show current logged-in user', 'muted');
-    print('  clear                          — clear terminal output', 'muted');
-    print('  help                           — show this message', 'muted');
+  help(args) {
+    if (args.trim() === 'close') {
+      closeHelpSidebar();
+      return;
+    }
+    openHelpSidebar();
   },
 
   async create(args) {
@@ -681,6 +669,76 @@ function makeResizable(win, handle) {
     document.addEventListener('mouseup', onUp);
   });
 }
+
+// ─── Help Sidebar ─────────────────────────────────────────────────────────────
+
+const HELP_SECTIONS = [
+  {
+    title: 'Documents',
+    entries: [
+      ['create &lt;filename&gt; [--public]', 'create a new document'],
+      ['new &lt;filename&gt;',              'alias for create'],
+      ['open &lt;filename&gt;',            'open / focus a document'],
+      ['close &lt;filename&gt;',           'close a document window'],
+      ['list',                           'list all your documents'],
+    ]
+  },
+  {
+    title: 'Tags',
+    entries: [
+      ['tag &lt;filename&gt; &lt;tag&gt;',   'add a tag'],
+      ['untag &lt;filename&gt; &lt;tag&gt;', 'remove a tag'],
+      ['tags [tag]',                     'list tags or files under a tag'],
+    ]
+  },
+  {
+    title: 'Visibility',
+    entries: [
+      ['publish &lt;filename&gt;',   'make a document public'],
+      ['unpublish &lt;filename&gt;', 'make a document private'],
+    ]
+  },
+  {
+    title: 'Account',
+    entries: [
+      ['register &lt;email&gt; &lt;password&gt;', 'create an account'],
+      ['login &lt;email&gt; &lt;password&gt;',    'sign in'],
+      ['logout',                               'sign out'],
+      ['whoami',                               'show current user'],
+    ]
+  },
+  {
+    title: 'Terminal',
+    entries: [
+      ['clear',      'clear terminal output'],
+      ['help',       'open this sidebar'],
+      ['help close', 'close this sidebar'],
+    ]
+  }
+];
+
+const helpSidebar = document.getElementById('help-sidebar');
+const helpContent = document.getElementById('help-sidebar-content');
+
+function openHelpSidebar() {
+  helpContent.innerHTML = HELP_SECTIONS.map(section => `
+    <div class="help-section">
+      <div class="help-section-title">${section.title}</div>
+      ${section.entries.map(([cmd, desc]) =>
+        `<div class="help-entry"><code>${cmd}</code><br><span>— ${desc}</span></div>`
+      ).join('')}
+    </div>
+  `).join('');
+  helpSidebar.classList.add('open');
+  print('Help opened on the right.', 'muted');
+}
+
+function closeHelpSidebar() {
+  helpSidebar.classList.remove('open');
+  print('Help closed.', 'muted');
+}
+
+document.getElementById('help-sidebar-close').addEventListener('click', closeHelpSidebar);
 
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
 
