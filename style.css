@@ -16,6 +16,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
 }
 
 #main-area {
@@ -23,6 +24,7 @@ body {
   display: flex;
   overflow: hidden;
   position: relative;
+  z-index: 1;
 }
 
 #space-bg {
@@ -120,6 +122,8 @@ body {
 
 /* Terminal Panel */
 #terminal-panel {
+  position: relative;
+  z-index: 1;
   height: 200px;
   min-height: 80px;
   max-height: 80vh;
