@@ -13,73 +13,55 @@ let historyIndex = -1;
 let zCounter = 100;
 let currentUser = null;   // currently logged-in Supabase user
 
-function docKey(name)  { return `doc:${currentUser ? currentUser.id : 'guest'}:${name}`; }
-function tagKey(name)  { return `doc-tags:${currentUser ? currentUser.id : 'guest'}:${name}`; }
-function visKey(name)  { return `doc-vis:${currentUser ? currentUser.id : 'guest'}:${name}`; }
-function docPrefix()   { return `doc:${currentUser ? currentUser.id : 'guest'}:`; }
-function tagPrefix()   { return `doc-tags:${currentUser ? currentUser.id : 'guest'}:`; }
-
-// ─── Visibility Storage ───────────────────────────────────────────────────────
-
-function getVisibility(name) {
-  try { return localStorage.getItem(visKey(name)) || 'private'; } catch(_) { return 'private'; }
-}
-function setVisibility(name, vis) {
-  try { localStorage.setItem(visKey(name), vis); } catch(_) {}
-  if (docs[name]) docs[name].win._refreshVisBtn();
+function requireLogin() {
+  if (!currentUser) { print('You must be logged in. Use  login <email> <password>', 'error'); return false; }
+  return true;
 }
 
-// ─── Tag Storage ──────────────────────────────────────────────────────────────
+// ─── Supabase Document Helpers ────────────────────────────────────────────────
 
-function getTags(filename) {
-  try { return JSON.parse(localStorage.getItem(tagKey(filename))) || []; } catch(_) { return []; }
+async function dbFileExists(name) {
+  const { data } = await _supabase.from('documents').select('filename').eq('user_id', currentUser.id).eq('filename', name).maybeSingle();
+  return !!data;
 }
-function saveTags(filename, tags) {
-  try { localStorage.setItem(tagKey(filename), JSON.stringify(tags)); } catch(_) {}
+
+async function dbSetVisibility(name, vis) {
+  await _supabase.from('documents').update({ visibility: vis }).eq('user_id', currentUser.id).eq('filename', name);
+  if (docs[name]) { docs[name].visibility = vis; docs[name].win._refreshVisBtn(); }
 }
-function addFileTag(filename, tag) {
-  const tags = getTags(filename);
+
+// ─── Tag Helpers (Supabase) ───────────────────────────────────────────────────
+
+async function getTags(filename) {
+  const { data } = await _supabase.from('documents').select('tags').eq('user_id', currentUser.id).eq('filename', filename).maybeSingle();
+  return data?.tags || [];
+}
+
+async function addFileTag(filename, tag) {
+  const tags = await getTags(filename);
   if (tags.includes(tag)) return false;
-  tags.push(tag);
-  saveTags(filename, tags);
+  await _supabase.from('documents').update({ tags: [...tags, tag] }).eq('user_id', currentUser.id).eq('filename', filename);
   if (docs[filename]) docs[filename].win._refreshTagBar();
   return true;
 }
-function removeFileTag(filename, tag) {
-  const tags = getTags(filename);
-  const idx = tags.indexOf(tag);
-  if (idx === -1) return false;
-  tags.splice(idx, 1);
-  saveTags(filename, tags);
+
+async function removeFileTag(filename, tag) {
+  const tags = await getTags(filename);
+  if (!tags.includes(tag)) return false;
+  await _supabase.from('documents').update({ tags: tags.filter(t => t !== tag) }).eq('user_id', currentUser.id).eq('filename', filename);
   if (docs[filename]) docs[filename].win._refreshTagBar();
   return true;
 }
-function getFilesWithTag(tag) {
-  const files = [];
-  const prefix = tagPrefix();
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
-        const tags = JSON.parse(localStorage.getItem(key)) || [];
-        if (tags.includes(tag)) files.push(key.slice(prefix.length));
-      }
-    }
-  } catch(_) {}
-  return files.sort();
+
+async function getFilesWithTag(tag) {
+  const { data } = await _supabase.from('documents').select('filename').eq('user_id', currentUser.id).contains('tags', [tag]);
+  return (data || []).map(d => d.filename).sort();
 }
-function getAllTags() {
+
+async function getAllTags() {
+  const { data } = await _supabase.from('documents').select('tags').eq('user_id', currentUser.id);
   const tagSet = new Set();
-  const prefix = tagPrefix();
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
-        const tags = JSON.parse(localStorage.getItem(key)) || [];
-        tags.forEach(t => tagSet.add(t));
-      }
-    }
-  } catch(_) {}
+  (data || []).forEach(d => (d.tags || []).forEach(t => tagSet.add(t)));
   return [...tagSet].sort();
 }
 
@@ -128,23 +110,26 @@ const COMMANDS = {
     print('  help                           — show this message', 'muted');
   },
 
-  create(args) {
+  async create(args) {
+    if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
     const name = parts[0];
     if (!name) { print('Usage: create <filename> [--public]', 'error'); return; }
-    if (docs[name] || fileExists(name)) {
+    if (docs[name] || await dbFileExists(name)) {
       print(`Error: "${name}" already exists. Use  open ${name}  to open it.`, 'error');
       return;
     }
     const vis = parts.includes('--public') ? 'public' : 'private';
-    setVisibility(name, vis);
-    openDocument(name);
+    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename: name, content: '', visibility: vis });
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    openDocument(name, '', vis);
     print(`Created document: ${name} [${vis}]`, 'success');
   },
 
   new(args) { COMMANDS.create(args); },
 
-  open(args) {
+  async open(args) {
+    if (!requireLogin()) return;
     const name = args.trim();
     if (!name) { print('Usage: open <filename>', 'error'); return; }
     if (docs[name]) {
@@ -152,11 +137,10 @@ const COMMANDS = {
       print(`Focused: ${name}`, 'success');
       return;
     }
-    if (!fileExists(name)) {
-      print(`Error: "${name}" does not exist. Use  create ${name}  to create it.`, 'error');
-      return;
-    }
-    openDocument(name);
+    const { data, error } = await _supabase.from('documents').select('content, visibility').eq('user_id', currentUser.id).eq('filename', name).maybeSingle();
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    if (!data) { print(`Error: "${name}" does not exist. Use  create ${name}  to create it.`, 'error'); return; }
+    openDocument(name, data.content, data.visibility);
     print(`Opened: ${name}`, 'success');
   },
 
@@ -168,80 +152,78 @@ const COMMANDS = {
     print(`Closed: ${name}`, 'success');
   },
 
-  list() {
-    const files = [];
-    const prefix = docPrefix();
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(prefix)) files.push(key.slice(prefix.length));
-      }
-    } catch(_) {}
-    files.sort();
-    if (files.length === 0) { print('No documents found.', 'muted'); return; }
-    print(`All documents (${files.length}):`, 'info');
-    files.forEach(n => {
-      const open = docs[n] ? ' [open]' : '';
-      const vis = getVisibility(n) === 'public' ? ' [public]' : ' [private]';
-      const tags = getTags(n);
-      const tagStr = tags.length ? '  ' + tags.map(t => `#${t}`).join(' ') : '';
-      print(`  • ${n}${open}${vis}${tagStr}`, 'muted');
+  async list() {
+    if (!requireLogin()) return;
+    const { data, error } = await _supabase.from('documents').select('filename, visibility, tags').eq('user_id', currentUser.id).order('filename');
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    if (data.length === 0) { print('No documents found.', 'muted'); return; }
+    print(`All documents (${data.length}):`, 'info');
+    data.forEach(({ filename, visibility, tags }) => {
+      const open = docs[filename] ? ' [open]' : '';
+      const vis = visibility === 'public' ? ' [public]' : ' [private]';
+      const tagStr = tags && tags.length ? '  ' + tags.map(t => `#${t}`).join(' ') : '';
+      print(`  • ${filename}${open}${vis}${tagStr}`, 'muted');
     });
   },
 
-  tag(args) {
+  async tag(args) {
+    if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
     if (parts.length < 2 || !parts[1]) { print('Usage: tag <filename> <tagname>', 'error'); return; }
     const [filename, tag] = parts;
-    if (!fileExists(filename) && !docs[filename]) {
+    if (!docs[filename] && !await dbFileExists(filename)) {
       print(`Error: "${filename}" does not exist.`, 'error'); return;
     }
-    if (addFileTag(filename, tag)) {
+    if (await addFileTag(filename, tag)) {
       print(`Tagged "${filename}" with #${tag}`, 'success');
     } else {
       print(`"${filename}" already has tag #${tag}`, 'info');
     }
   },
 
-  untag(args) {
+  async untag(args) {
+    if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
     if (parts.length < 2 || !parts[1]) { print('Usage: untag <filename> <tagname>', 'error'); return; }
     const [filename, tag] = parts;
-    if (removeFileTag(filename, tag)) {
+    if (await removeFileTag(filename, tag)) {
       print(`Removed #${tag} from "${filename}"`, 'success');
     } else {
       print(`"${filename}" does not have tag #${tag}`, 'error');
     }
   },
 
-  tags(args) {
+  async tags(args) {
+    if (!requireLogin()) return;
     const tag = args.trim();
     if (!tag) {
-      const allTags = getAllTags();
+      const allTags = await getAllTags();
       if (allTags.length === 0) { print('No tags found.', 'muted'); return; }
       print(`All tags (${allTags.length}):`, 'info');
       allTags.forEach(t => print(`  #${t}`, 'muted'));
       return;
     }
-    const files = getFilesWithTag(tag);
+    const files = await getFilesWithTag(tag);
     if (files.length === 0) { print(`No files tagged with #${tag}`, 'muted'); return; }
     print(`Files tagged #${tag} (${files.length}):`, 'info');
     files.forEach(f => print(`  • ${f}`, 'muted'));
   },
 
-  publish(args) {
+  async publish(args) {
+    if (!requireLogin()) return;
     const name = args.trim();
     if (!name) { print('Usage: publish <filename>', 'error'); return; }
-    if (!fileExists(name) && !docs[name]) { print(`Error: "${name}" does not exist.`, 'error'); return; }
-    setVisibility(name, 'public');
+    if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
+    await dbSetVisibility(name, 'public');
     print(`"${name}" is now public.`, 'success');
   },
 
-  unpublish(args) {
+  async unpublish(args) {
+    if (!requireLogin()) return;
     const name = args.trim();
     if (!name) { print('Usage: unpublish <filename>', 'error'); return; }
-    if (!fileExists(name) && !docs[name]) { print(`Error: "${name}" does not exist.`, 'error'); return; }
-    setVisibility(name, 'private');
+    if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
+    await dbSetVisibility(name, 'private');
     print(`"${name}" is now private.`, 'success');
   },
 
@@ -333,10 +315,10 @@ document.getElementById('terminal-panel').addEventListener('click', () => input.
 
 // ─── Document Windows ─────────────────────────────────────────────────────────
 
-function openDocument(name) {
-  const win = buildWindow(name);
+function openDocument(name, content = '', visibility = 'private') {
+  const win = buildWindow(name, content, visibility);
   container.appendChild(win);
-  docs[name] = { content: '', win };
+  docs[name] = { content, win, visibility };
   focusWindow(win);
   updateHint();
 }
@@ -374,7 +356,7 @@ function updateHint() {
 
 // ─── Window Builder ───────────────────────────────────────────────────────────
 
-function buildWindow(name) {
+function buildWindow(name, initialContent = '', initialVisibility = 'private') {
   const win = document.createElement('div');
   win.className = 'doc-window';
 
@@ -449,14 +431,15 @@ function buildWindow(name) {
   visBtn.className = 'toolbar-btn vis-btn';
 
   function refreshVisBtn() {
-    const v = getVisibility(name);
+    const v = docs[name] ? docs[name].visibility : initialVisibility;
     visBtn.textContent = v === 'public' ? '🌐 Public' : '🔒 Private';
     visBtn.title = v === 'public' ? 'Click to make private' : 'Click to make public';
   }
   refreshVisBtn();
-  visBtn.addEventListener('click', () => {
-    const next = getVisibility(name) === 'public' ? 'private' : 'public';
-    setVisibility(name, next);
+  visBtn.addEventListener('click', async () => {
+    const current = docs[name] ? docs[name].visibility : initialVisibility;
+    const next = current === 'public' ? 'private' : 'public';
+    await dbSetVisibility(name, next);
     print(`"${name}" is now ${next}.`, 'success');
   });
   win._refreshVisBtn = refreshVisBtn;
@@ -486,29 +469,30 @@ function buildWindow(name) {
   tagbar.appendChild(tagPillsEl);
   tagbar.appendChild(tagAddInput);
 
-  function refreshTagBar() {
+  async function refreshTagBar() {
     tagPillsEl.innerHTML = '';
-    getTags(name).forEach(tag => {
+    const tags = await getTags(name);
+    tags.forEach(tag => {
       const pill = document.createElement('span');
       pill.className = 'tag-pill';
       pill.innerHTML = `#${tag} <button class="tag-pill-remove" title="Remove tag">×</button>`;
-      pill.querySelector('.tag-pill-remove').addEventListener('click', e => {
+      pill.querySelector('.tag-pill-remove').addEventListener('click', async e => {
         e.stopPropagation();
-        removeFileTag(name, tag);
+        await removeFileTag(name, tag);
       });
       tagPillsEl.appendChild(pill);
     });
   }
 
-  tagAddInput.addEventListener('keydown', e => {
+  tagAddInput.addEventListener('keydown', async e => {
     if (e.key === 'Enter') {
       const tag = tagAddInput.value.trim().replace(/\s+/g, '-').replace(/^#+/, '');
       tagAddInput.value = '';
       if (!tag) return;
-      if (!addFileTag(name, tag)) {
-        print(`"${name}" already has tag #${tag}`, 'info');
-      } else {
+      if (await addFileTag(name, tag)) {
         print(`Tagged "${name}" with #${tag}`, 'success');
+      } else {
+        print(`"${name}" already has tag #${tag}`, 'info');
       }
     }
   });
@@ -576,21 +560,21 @@ function buildWindow(name) {
     savedIndicator.textContent = 'unsaved';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      savedIndicator.textContent = 'saved ✓';
-      // Store in localStorage
-      try { localStorage.setItem(docKey(name), editor.value); } catch(_) {}
+      savedIndicator.textContent = 'saving…';
+      _supabase.from('documents')
+        .update({ content: editor.value, updated_at: new Date().toISOString() })
+        .eq('user_id', currentUser.id).eq('filename', name)
+        .then(({ error }) => {
+          savedIndicator.textContent = error ? 'save failed ✗' : 'saved ✓';
+        });
     }, 800);
   });
 
-  // Load from localStorage if exists
-  try {
-    const saved = localStorage.getItem(docKey(name));
-    if (saved) {
-      editor.value = saved;
-      docs[name].content = saved;
-      savedIndicator.textContent = 'restored ✓';
-    }
-  } catch(_) {}
+  // Load content passed in from Supabase
+  if (initialContent) {
+    editor.value = initialContent;
+    savedIndicator.textContent = 'loaded ✓';
+  }
 
   // Image upload
   fileInput.addEventListener('change', () => {
@@ -626,9 +610,6 @@ function buildWindow(name) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fileExists(name) {
-  try { return localStorage.getItem(docKey(name)) !== null; } catch(_) { return false; }
-}
 
 function makeTL(cls) {
   const el = document.createElement('div');
