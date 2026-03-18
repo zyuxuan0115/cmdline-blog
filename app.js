@@ -549,6 +549,8 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     preview.classList.remove('visible');
     btnEdit.classList.add('active');
     btnPreview.classList.remove('active');
+    uploadLabel.style.display = '';
+    visBtn.style.display = '';
     editor.focus();
   }
 
@@ -559,6 +561,8 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     preview.classList.add('visible');
     btnPreview.classList.add('active');
     btnEdit.classList.remove('active');
+    uploadLabel.style.display = 'none';
+    visBtn.style.display = 'none';
   }
 
   btnEdit.addEventListener('click', switchToEdit);
