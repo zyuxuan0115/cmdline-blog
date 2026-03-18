@@ -46,8 +46,10 @@ body {
 #help-sidebar {
   z-index: 1;
   width: 0;
-  background: #0d1117;
-  border-left: 2px solid #00ff88;
+  background: rgba(8, 12, 20, 0.65);
+  backdrop-filter: blur(5px) saturate(180%);
+  -webkit-backdrop-filter: blur(5px) saturate(180%);
+  border-left: 1px solid rgba(0, 255, 136, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -64,7 +66,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-bottom: 1px solid #1a3322;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.15);
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   font-weight: bold;
@@ -127,8 +129,10 @@ body {
   height: 200px;
   min-height: 80px;
   max-height: 80vh;
-  background: #0d0d0d;
-  border-top: 2px solid #00ff88;
+  background: rgba(8, 12, 20, 0.65);
+  backdrop-filter: blur(5px) saturate(180%);
+  -webkit-backdrop-filter: blur(5px) saturate(180%);
+  border-top: 1px solid rgba(0, 255, 136, 0.25);
   display: flex;
   flex-direction: column;
   padding: 0 12px 8px;
