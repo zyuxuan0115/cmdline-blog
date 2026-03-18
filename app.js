@@ -748,6 +748,37 @@ function updatePrompt(email) {
   promptEl.textContent = email ? `${email} $ ` : '$ ';
 }
 
+// ─── Terminal Resize ──────────────────────────────────────────────────────────
+
+(function () {
+  const panel  = document.getElementById('terminal-panel');
+  const handle = document.getElementById('terminal-resize-handle');
+
+  handle.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startY      = e.clientY;
+    const startHeight = panel.offsetHeight;
+    handle.classList.add('dragging');
+
+    function onMove(e) {
+      const delta = startY - e.clientY;       // drag up → taller
+      const min   = parseInt(getComputedStyle(panel).minHeight);
+      const max   = parseInt(getComputedStyle(panel).maxHeight);
+      panel.style.height = Math.min(max, Math.max(min, startHeight + delta)) + 'px';
+    }
+
+    function onUp() {
+      handle.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+})();
+
 // ─── Space Background ─────────────────────────────────────────────────────────
 
 (function () {
@@ -773,7 +804,7 @@ function updatePrompt(email) {
 
   function buildStars() {
     stars = [];
-    const n = Math.floor(canvas.width * canvas.height / 1800);
+    const n = Math.floor(canvas.width * canvas.height / 700);
     for (let i = 0; i < n; i++) {
       const size = Math.random() < 0.04 ? Math.random() * 2 + 1.5   // bright giant
                  : Math.random() < 0.15 ? Math.random() * 1 + 0.8   // medium
@@ -782,7 +813,7 @@ function updatePrompt(email) {
         x:      Math.random() * canvas.width,
         y:      Math.random() * canvas.height,
         size,
-        base:   Math.random() * 0.5 + (size > 1.5 ? 0.6 : 0.2),
+        base:   Math.random() * 0.4 + (size > 1.5 ? 0.85 : 0.55),
         speed:  Math.random() * 1.2 + 0.2,
         phase:  Math.random() * Math.PI * 2,
         hue:    [0, 210, 220, 40][Math.floor(Math.random() * 4)], // white/blue/cyan/warm
@@ -802,7 +833,7 @@ function updatePrompt(email) {
     });
   }
 
-  const ROT_SPEED = 0.012; // radians per second — full rotation ~8.7 min
+  const ROT_SPEED = 0.024; // radians per second — full rotation ~4.4 min
 
   function draw(ts) {
     const t   = ts / 1000;
