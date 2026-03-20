@@ -298,6 +298,37 @@ input.addEventListener('keydown', e => {
   }
 });
 
+// Ctrl+` toggle focus between terminal and last focused document window
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote')) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const isTerminalFocused = document.activeElement === input
+      || document.activeElement.closest('#terminal-panel');
+
+    if (isTerminalFocused) {
+      let targetWin = document.querySelector('.doc-window.focused');
+      if (!targetWin) {
+        let maxZ = -1;
+        document.querySelectorAll('.doc-window').forEach(w => {
+          const z = parseInt(w.style.zIndex) || 0;
+          if (z > maxZ) { maxZ = z; targetWin = w; }
+        });
+      }
+      if (targetWin) {
+        focusWindow(targetWin);
+        const editor = targetWin.querySelector('textarea.doc-editor');
+        if (editor && editor.style.display !== 'none') {
+          editor.focus();
+        }
+      }
+    } else {
+      input.focus();
+    }
+  }
+});
+
 // Keep input focused when clicking terminal panel
 document.getElementById('terminal-panel').addEventListener('click', () => input.focus());
 
