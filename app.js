@@ -300,7 +300,7 @@ input.addEventListener('keydown', e => {
 
 // Ctrl+` toggle focus between terminal and last focused document window
 document.addEventListener('keydown', e => {
-  if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote')) {
+  if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote' || e.keyCode === 192)) {
     e.preventDefault();
     e.stopPropagation();
 
