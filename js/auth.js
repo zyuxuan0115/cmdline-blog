@@ -4,10 +4,29 @@ async function authRegister(args) {
   const parts = args.trim().split(/\s+/);
   if (parts.length < 3 || !parts[2]) { print('Usage: register <email> <password> <username>', 'error'); return; }
   const [email, password, username] = parts;
-  print(`Registering ${username}…`, 'muted');
-  const { error } = await _supabase.auth.signUp({ email, password, options: { data: { username } } });
-  if (error) { print(`Error: ${error.message}`, 'error'); return; }
-  print(`Registered! Check your email (${email}) to confirm your account.`, 'success');
+  print('Please enter your invitation code:', 'info');
+  pendingAction = async (code) => {
+    if (!code.trim()) { print('Registration cancelled.', 'muted'); return; }
+    // Validate invitation code against Supabase
+    const trimmedCode = code.trim();
+    // Debug: fetch all codes to compare
+    const { data: allCodes } = await _supabase.from('invitation_codes').select('code');
+    print(`DEBUG: your input (${trimmedCode.length} chars): "${trimmedCode}"`, 'muted');
+    if (allCodes && allCodes.length > 0) {
+      const stored = allCodes[0].code;
+      print(`DEBUG: stored code (${stored.length} chars): "${stored}"`, 'muted');
+      print(`DEBUG: match = ${stored === trimmedCode}`, 'muted');
+    } else {
+      print(`DEBUG: no codes found in table (data: ${JSON.stringify(allCodes)})`, 'muted');
+    }
+    const { data: codeData, error: codeErr } = await _supabase.from('invitation_codes').select('code').eq('code', trimmedCode).maybeSingle();
+    if (codeErr) { print(`Error: ${codeErr.message}`, 'error'); return; }
+    if (!codeData) { print('Error: invalid invitation code.', 'error'); return; }
+    print(`Registering ${username}…`, 'muted');
+    const { error } = await _supabase.auth.signUp({ email, password, options: { data: { username } } });
+    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    print(`Registered! Check your email (${email}) to confirm your account.`, 'success');
+  };
 }
 
 async function authLogin(args) {
