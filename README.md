@@ -51,37 +51,3 @@ Registration requires the following invitation code:
 ```
 bdde0748f2bef928dc39a7c956bea1f97a2f5998abde14033bfc30e932bffbd4
 ```
-
-## Supabase Setup
-
-The app requires the following in your Supabase project:
-
-**invitation_codes table:**
-
-```sql
-create table invitation_codes (
-  id uuid default gen_random_uuid() primary key,
-  code text not null unique,
-  created_at timestamptz default now()
-);
-
-alter table invitation_codes enable row level security;
-create policy "Anyone can read invitation codes"
-  on invitation_codes for select to anon using (true);
-grant usage on schema public to anon;
-grant select on invitation_codes to anon;
-
-insert into invitation_codes (code)
-values ('bdde0748f2bef928dc39a7c956bea1f97a2f5998abde14033bfc30e932bffbd4');
-```
-
-**delete_user function (for unregister):**
-
-```sql
-create or replace function delete_user()
-returns void as $$
-begin
-  delete from auth.users where id = auth.uid();
-end;
-$$ language plpgsql security definer;
-```
