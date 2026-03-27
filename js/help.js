@@ -29,9 +29,10 @@ const HELP_SECTIONS = [
   {
     title: 'Account',
     entries: [
-      ['register &lt;email&gt; &lt;password&gt;', 'create an account'],
+      ['register &lt;email&gt; &lt;password&gt; &lt;username&gt;', 'create an account'],
       ['login &lt;email&gt; &lt;password&gt;',    'sign in'],
       ['logout',                               'sign out'],
+      ['unregister',                           'delete your account'],
       ['whoami',                               'show current user'],
     ]
   },

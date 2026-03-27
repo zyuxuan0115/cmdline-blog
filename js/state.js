@@ -12,6 +12,7 @@ let cmdHistory = [];
 let historyIndex = -1;
 let zCounter = 100;
 let currentUser = null;   // currently logged-in Supabase user
+let pendingAction = null; // callback for confirmation prompts (e.g. unregister)
 
 // ─── Shared DOM refs ─────────────────────────────────────────────────────────
 

@@ -140,6 +140,7 @@ const COMMANDS = {
   login(args) { authLogin(args); },
   logout() { authLogout(); },
   whoami() { authWhoami(); },
+  unregister() { authUnregister(); },
 
   clear() {
     output.innerHTML = '';
@@ -169,7 +170,13 @@ input.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     const val = input.value;
     input.value = '';
-    runCommand(val);
+    if (pendingAction) {
+      const action = pendingAction;
+      pendingAction = null;
+      action(val);
+    } else {
+      runCommand(val);
+    }
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (historyIndex < cmdHistory.length - 1) {
