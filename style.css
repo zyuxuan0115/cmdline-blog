@@ -64,6 +64,20 @@ body {
   width: 280px;
 }
 
+#help-sidebar-content {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+#help-sidebar-content.slide-out {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+#help-sidebar-content.slide-in {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
 #help-sidebar-header {
   display: flex;
   align-items: center;
