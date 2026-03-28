@@ -29,7 +29,8 @@ const COMMANDS = {
       return;
     }
     const vis = parts.includes('--public') ? 'public' : 'private';
-    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename: name, content: '', visibility: vis, title: '' });
+    const authorName = currentUser.user_metadata?.username || currentUser.email;
+    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename: name, content: '', visibility: vis, title: '', author_name: authorName });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
     openDocument(name, '', vis, '', 'edit');
     print(`Created document: ${name} [${vis}]`, 'success');

@@ -48,6 +48,7 @@ const HELP_SECTIONS = [
 
 const helpSidebar = document.getElementById('help-sidebar');
 const helpContent = document.getElementById('help-sidebar-content');
+const sidebarTitle = document.getElementById('help-sidebar-title');
 let currentSidebarView = null; // 'help' or 'list'
 
 function buildHelpHTML() {
@@ -61,28 +62,48 @@ function buildHelpHTML() {
   `).join('');
 }
 
-function buildListHTML(data) {
-  if (data.length === 0) {
-    return '<div class="help-section"><div class="help-section-title">My Documents</div><div class="help-entry"><span>No documents found.</span></div></div>';
+function buildListHTML(myDocs, publicDocs) {
+  let html = '';
+  // My documents section
+  if (myDocs.length === 0) {
+    html += '<div class="help-section"><div class="help-section-title">My Documents</div><div class="help-entry"><span>No documents found.</span></div></div>';
+  } else {
+    html += `
+      <div class="help-section">
+        <div class="help-section-title">My Documents (${myDocs.length})</div>
+        ${myDocs.map(({ filename, title, visibility, tags, updated_at }) => {
+          const displayName = title || filename;
+          const open = docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
+          const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
+          const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
+          const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
+          return `<div class="help-entry" style="cursor:pointer" onclick="runCommand('open ${filename}')"><code>${displayName}</code>${open}${vis}${tagStr}${timeStr}</div>`;
+        }).join('')}
+      </div>
+    `;
   }
-  return `
-    <div class="help-section">
-      <div class="help-section-title">My Documents (${data.length})</div>
-      ${data.map(({ filename, title, visibility, tags, updated_at }) => {
-        const displayName = title || filename;
-        const open = docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
-        const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
-        const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
-        const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
-        return `<div class="help-entry" style="cursor:pointer" onclick="runCommand('open ${filename}')"><code>${displayName}</code>${open}${vis}${tagStr}${timeStr}</div>`;
-      }).join('')}
-    </div>
-  `;
+  // Public documents from other authors
+  if (publicDocs.length > 0) {
+    html += `
+      <div class="help-section">
+        <div class="help-section-title">Public Documents (${publicDocs.length})</div>
+        ${publicDocs.map(({ filename, title, author_name, tags, updated_at }) => {
+          const displayName = title || filename;
+          const author = author_name || 'unknown';
+          const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
+          const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
+          return `<div class="help-entry"><code>${displayName}</code> <span style="color:#ffadd6">by ${author}</span>${tagStr}${timeStr}</div>`;
+        }).join('')}
+      </div>
+    `;
+  }
+  return html;
 }
 
-function swapSidebarContent(newHTML, newView) {
+function swapSidebarContent(newHTML, newView, titleText) {
   // If sidebar is not open yet, just set content and open
   if (!helpSidebar.classList.contains('open')) {
+    sidebarTitle.textContent = titleText;
     helpContent.innerHTML = newHTML;
     currentSidebarView = newView;
     helpSidebar.classList.add('open');
@@ -91,6 +112,7 @@ function swapSidebarContent(newHTML, newView) {
   // Slide current content out to the right
   helpContent.classList.add('slide-out');
   setTimeout(() => {
+    sidebarTitle.textContent = titleText;
     helpContent.innerHTML = newHTML;
     helpContent.classList.remove('slide-out');
     // Start off-screen from the left
@@ -104,7 +126,7 @@ function swapSidebarContent(newHTML, newView) {
 }
 
 function openHelpSidebar() {
-  swapSidebarContent(buildHelpHTML(), 'help');
+  swapSidebarContent(buildHelpHTML(), 'help', 'Commands');
   print('Help opened on the right.', 'muted');
 }
 
@@ -114,9 +136,13 @@ function closeHelpSidebar() {
 }
 
 async function openListSidebar() {
-  const { data, error } = await _supabase.from('documents').select('filename, title, visibility, tags, updated_at').eq('user_id', currentUser.id).order('filename');
-  if (error) { print(`Error: ${error.message}`, 'error'); return; }
-  swapSidebarContent(buildListHTML(data), 'list');
+  // Fetch own documents
+  const { data: myDocs, error: myErr } = await _supabase.from('documents').select('filename, title, visibility, tags, updated_at, author_name').eq('user_id', currentUser.id).order('filename');
+  if (myErr) { print(`Error: ${myErr.message}`, 'error'); return; }
+  // Fetch public documents from other authors
+  const { data: publicDocs, error: pubErr } = await _supabase.from('documents').select('filename, title, tags, updated_at, author_name').eq('visibility', 'public').neq('user_id', currentUser.id).order('filename');
+  if (pubErr) { print(`Error: ${pubErr.message}`, 'error'); return; }
+  swapSidebarContent(buildListHTML(myDocs, publicDocs), 'list', 'All Documents');
   print('File list opened on the right.', 'muted');
 }
 
