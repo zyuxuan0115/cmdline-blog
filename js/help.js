@@ -67,7 +67,7 @@ function closeHelpSidebar() {
 }
 
 async function openListSidebar() {
-  const { data, error } = await _supabase.from('documents').select('filename, visibility, tags').eq('user_id', currentUser.id).order('filename');
+  const { data, error } = await _supabase.from('documents').select('filename, visibility, tags, updated_at').eq('user_id', currentUser.id).order('filename');
   if (error) { print(`Error: ${error.message}`, 'error'); return; }
   if (data.length === 0) {
     helpContent.innerHTML = '<div class="help-section"><div class="help-section-title">My Documents</div><div class="help-entry"><span>No documents found.</span></div></div>';
@@ -75,11 +75,12 @@ async function openListSidebar() {
     helpContent.innerHTML = `
       <div class="help-section">
         <div class="help-section-title">My Documents (${data.length})</div>
-        ${data.map(({ filename, visibility, tags }) => {
+        ${data.map(({ filename, visibility, tags, updated_at }) => {
           const open = docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
           const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
           const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
-          return `<div class="help-entry" style="cursor:pointer" onclick="runCommand('open ${filename}')"><code>${filename}</code>${open}${vis}${tagStr}</div>`;
+          const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
+          return `<div class="help-entry" style="cursor:pointer" onclick="runCommand('open ${filename}')"><code>${filename}</code>${open}${vis}${tagStr}${timeStr}</div>`;
         }).join('')}
       </div>
     `;
