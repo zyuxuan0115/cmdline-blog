@@ -194,6 +194,7 @@ body {
 .terminal-line.error { color: #ff4466; }
 .terminal-line.info { color: #88aaff; }
 .terminal-line.muted { color: #556677; }
+.terminal-line.pink { color: #ff69b4; }
 
 #terminal-input-row {
   display: flex;

@@ -46,8 +46,10 @@ A web-based markdown document editor with a retro terminal interface and animate
 
 ## Invitation Code
 
-Registration requires the following invitation code:
+Registration requires one of the following invitation codes:
 
 ```
 bdde0748f2bef928dc39a7c956bea1f97a2f5998abde14033bfc30e932bffbd4
+d6c81c42107af620b5f6becd260eba464f4a880dadfb2d569fea3cfca3b76b3e
+e35b098c9438d391c02b8adb9d977397a7f95cb177552ad3bf60e91a43a7882a
 ```

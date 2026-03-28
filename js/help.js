@@ -64,7 +64,28 @@ function openHelpSidebar() {
 
 function closeHelpSidebar() {
   helpSidebar.classList.remove('open');
-  print('Help closed.', 'muted');
+}
+
+async function openListSidebar() {
+  const { data, error } = await _supabase.from('documents').select('filename, visibility, tags').eq('user_id', currentUser.id).order('filename');
+  if (error) { print(`Error: ${error.message}`, 'error'); return; }
+  if (data.length === 0) {
+    helpContent.innerHTML = '<div class="help-section"><div class="help-section-title">My Documents</div><div class="help-entry"><span>No documents found.</span></div></div>';
+  } else {
+    helpContent.innerHTML = `
+      <div class="help-section">
+        <div class="help-section-title">My Documents (${data.length})</div>
+        ${data.map(({ filename, visibility, tags }) => {
+          const open = docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
+          const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
+          const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
+          return `<div class="help-entry" style="cursor:pointer" onclick="runCommand('open ${filename}')"><code>${filename}</code>${open}${vis}${tagStr}</div>`;
+        }).join('')}
+      </div>
+    `;
+  }
+  helpSidebar.classList.add('open');
+  print('File list opened on the right.', 'muted');
 }
 
 document.getElementById('help-sidebar-close').addEventListener('click', closeHelpSidebar);

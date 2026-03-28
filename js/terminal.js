@@ -1,9 +1,9 @@
 // ─── Terminal ─────────────────────────────────────────────────────────────────
 
 function printBanner() {
-  print('╔════════════════════════════════════════╗', 'muted');
+  print('╔════════════════════════════════════════╗', 'success');
   print('║      Terminal Document Editor  v1.0    ║', 'success');
-  print('╚════════════════════════════════════════╝', 'muted');
+  print('╚════════════════════════════════════════╝', 'success');
   print('Type  help  to see available commands.', 'info');
   print('', 'muted');
 }
@@ -63,16 +63,7 @@ const COMMANDS = {
 
   async list() {
     if (!requireLogin()) return;
-    const { data, error } = await _supabase.from('documents').select('filename, visibility, tags').eq('user_id', currentUser.id).order('filename');
-    if (error) { print(`Error: ${error.message}`, 'error'); return; }
-    if (data.length === 0) { print('No documents found.', 'muted'); return; }
-    print(`All documents (${data.length}):`, 'info');
-    data.forEach(({ filename, visibility, tags }) => {
-      const open = docs[filename] ? ' [open]' : '';
-      const vis = visibility === 'public' ? ' [public]' : ' [private]';
-      const tagStr = tags && tags.length ? '  ' + tags.map(t => `#${t}`).join(' ') : '';
-      print(`  • ${filename}${open}${vis}${tagStr}`, 'muted');
-    });
+    await openListSidebar();
   },
 
   async tag(args) {
