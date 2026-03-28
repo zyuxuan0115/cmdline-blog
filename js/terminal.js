@@ -62,9 +62,9 @@ const COMMANDS = {
     print(`Closed: ${name}`, 'success');
   },
 
-  async list() {
+  async list(args) {
     if (!requireLogin()) return;
-    await openListSidebar();
+    await openListSidebar(args.trim());
   },
 
   async tag(args) {
