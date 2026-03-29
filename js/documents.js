@@ -90,8 +90,18 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   titleEl.className = 'doc-title';
   titleEl.textContent = name;
 
+  const tabGroup = document.createElement('div');
+  tabGroup.className = 'doc-tab-group';
+
+  const btnEdit    = makeBtn('Edit',    'doc-tab active');
+  const btnPreview = makeBtn('Preview', 'doc-tab');
+
+  tabGroup.appendChild(btnEdit);
+  tabGroup.appendChild(btnPreview);
+
   titlebar.appendChild(lights);
   titlebar.appendChild(titleEl);
+  titlebar.appendChild(tabGroup);
 
   // ── Title input ──
   const titleBar = document.createElement('div');
@@ -118,11 +128,6 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   // ── Toolbar ──
   const toolbar = document.createElement('div');
   toolbar.className = 'doc-toolbar';
-
-  const btnEdit    = makeBtn('Edit',    'toolbar-btn active');
-  const btnPreview = makeBtn('Preview', 'toolbar-btn');
-  const divider    = document.createElement('div');
-  divider.className = 'toolbar-divider';
 
   // Image upload button
   const uploadLabel = document.createElement('label');
@@ -154,9 +159,6 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   const savedIndicator = document.createElement('span');
   savedIndicator.className = 'doc-saved';
 
-  toolbar.appendChild(btnEdit);
-  toolbar.appendChild(btnPreview);
-  toolbar.appendChild(divider);
   toolbar.appendChild(uploadLabel);
   toolbar.appendChild(visBtn);
   toolbar.appendChild(savedIndicator);

@@ -287,10 +287,33 @@ body {
   font-size: 13px;
   font-family: 'Courier New', Courier, monospace;
   text-align: center;
-  padding-right: 60px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.doc-tab-group {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.doc-tab {
+  padding: 4px 14px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: #888;
+  font-family: 'Courier New', Courier, monospace;
+  transition: color 0.15s, border-color 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.doc-tab:hover { color: #ccc; }
+.doc-tab.active {
+  color: #fff;
+  border-bottom-color: #ffadd6;
 }
 
 /* Title bar */
