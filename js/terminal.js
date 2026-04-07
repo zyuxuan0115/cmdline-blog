@@ -1,9 +1,6 @@
 // ─── Terminal ─────────────────────────────────────────────────────────────────
 
 function printBanner() {
-  print('╔════════════════════════════════════════╗', 'success');
-  print('║      Terminal Document Editor  v1.0    ║', 'success');
-  print('╚════════════════════════════════════════╝', 'success');
   print('Type  help  to see available commands.', 'info');
   print('', 'muted');
 }
