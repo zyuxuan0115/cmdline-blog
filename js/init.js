@@ -4,6 +4,13 @@ printBanner();
 updateHint();
 input.focus();
 
+const girlBubble = document.getElementById('terminal-girl-bubble');
+if (girlBubble) {
+  input.addEventListener('input', () => {
+    girlBubble.classList.add('hidden');
+  }, { once: true });
+}
+
 // Restore existing session on page load
 _supabase.auth.getSession().then(({ data: { session } }) => {
   if (session) {

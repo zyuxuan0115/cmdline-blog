@@ -206,6 +206,36 @@ input, textarea, button, select {
   z-index: 2;
 }
 
+#terminal-girl-bubble {
+  position: absolute;
+  left: calc(24px + 173px + 10px);
+  bottom: calc(100% + 90px);
+  background-image: url("pic/speech_bubble.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  width: 200px;
+  height: 90px;
+  padding: 22px 22px 32px 22px;
+  box-sizing: border-box;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #c4577a;
+  line-height: 1.5;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+#terminal-girl-bubble.hidden {
+  display: none;
+}
+
 #terminal-resize-handle {
   height: 8px;
   margin: 0 -12px;
