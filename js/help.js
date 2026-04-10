@@ -68,7 +68,7 @@ function buildHelpHTML() {
 function buildDocEntry(doc, isMine) {
   const { filename, title, visibility, tags, updated_at, author_name } = doc;
   const displayTitle = title ? `<code>${title}</code>` : `<code>${filename}</code>`;
-  const fileLabel = title ? `<br><span style="color:#556677;font-size:0.85em">${filename}</span>` : '';
+  const fileLabel = title && isMine ? `<br><span style="color:#556677;font-size:0.85em">${filename}</span>` : '';
   const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
   const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
