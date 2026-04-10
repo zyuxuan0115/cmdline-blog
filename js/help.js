@@ -67,14 +67,15 @@ function buildHelpHTML() {
 
 function buildDocEntry(doc, isMine) {
   const { filename, title, visibility, tags, updated_at, author_name } = doc;
-  const displayName = title || filename;
+  const displayTitle = title ? `<code>${title}</code>` : `<code>${filename}</code>`;
+  const fileLabel = title ? `<br><span style="color:#556677;font-size:0.85em">${filename}</span>` : '';
   const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
   const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
   const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
   const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
   const clickAttr = isMine ? ` style="cursor:pointer" onclick="runCommand('open ${filename}')"` : '';
-  return `<div class="help-entry"${clickAttr}><code>${displayName}</code>${open}${vis}${author}${tagStr}${timeStr}</div>`;
+  return `<div class="help-entry"${clickAttr}>${displayTitle}${open}${vis}${author}${fileLabel}${tagStr}${timeStr}</div>`;
 }
 
 function buildListHTML(documents, sectionTitle, isMine) {
