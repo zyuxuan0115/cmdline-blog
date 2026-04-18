@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - CmdLine Blog</title>
+  <style>
+    @font-face {
+      font-family: 'Cubic 11';
+      src: url('../fonts/Cubic_11.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      font-weight: normal;
+      font-synthesis: none;
+      -webkit-font-synthesis: none;
+    }
+
+    html, body {
+      font-family: 'Cubic 11', monospace;
+      background: #070b14;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(8, 12, 20, 0.75);
+      backdrop-filter: blur(5px) saturate(180%);
+      -webkit-backdrop-filter: blur(5px) saturate(180%);
+      border: 4px solid #ffadd6;
+      box-shadow: 6px 6px 0 #000, 0 0 20px rgba(255, 173, 214, 0.15);
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .card h1 {
+      font-family: 'Cubic 11', monospace;
+      font-size: 16px;
+      color: #ffadd6;
+      text-shadow: 2px 2px 0 #000;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .field {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      display: block;
+      font-family: 'Cubic 11', monospace;
+      font-size: 12px;
+      color: #aabbcc;
+      margin-bottom: 8px;
+    }
+
+    .field input {
+      width: 100%;
+      font-family: 'Cubic 11', monospace;
+      font-size: 14px;
+      color: #e0e8f0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 3px solid #334;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: #ffadd6;
+      box-shadow: 0 0 8px rgba(255, 173, 214, 0.25);
+    }
+
+    .error-msg {
+      font-family: 'Cubic 11', monospace;
+      font-size: 12px;
+      color: #ff6b6b;
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+
+    button[type="submit"] {
+      display: inline-block;
+      font-family: 'Cubic 11', monospace;
+      font-size: 12px;
+      color: #070b14;
+      background: #ffadd6;
+      border: 4px solid #ffadd6;
+      box-shadow: 4px 4px 0 #000;
+      padding: 12px 32px;
+      cursor: pointer;
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+
+    button[type="submit"]:hover {
+      background: #ffc4e0;
+      border-color: #ffc4e0;
+    }
+
+    button[type="submit"]:active {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
+
+    .girl {
+      position: fixed;
+      bottom: 0;
+      left: 32px;
+      height: 200px;
+      z-index: 1;
+    }
+
+    .blonde-girl {
+      position: fixed;
+      bottom: 0;
+      right: 32px;
+      height: 200px;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="space-bg"></canvas>
+  <div class="card">
+    <h1>Admin Login</h1>
+    <form id="login-form">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <div class="error-msg" id="error-msg"></div>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+  <img class="girl" src="../pic/girl.png" alt="">
+  <img class="blonde-girl" src="../pic/blonde_girl.png" alt="">
+
+  <script>
+    // Starfield background (same as register page)
+    (function () {
+      const canvas = document.getElementById('space-bg');
+      const ctx = canvas.getContext('2d');
+
+      const NEBULAE = [
+        { rx: 0.15, ry: 0.25, r: 0.30, color: [120, 30, 220] },
+        { rx: 0.72, ry: 0.55, r: 0.32, color: [20, 90, 210] },
+        { rx: 0.48, ry: 0.10, r: 0.22, color: [200, 40, 110] },
+        { rx: 0.88, ry: 0.30, r: 0.20, color: [40, 160, 255] },
+        { rx: 0.35, ry: 0.80, r: 0.25, color: [80, 20, 180] },
+      ];
+
+      let stars = [];
+      let VW = 0, VH = 0;
+
+      function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+
+      function buildStars() {
+        stars = [];
+        const W = Math.max(canvas.width, window.screen.availWidth || 2560);
+        const H = Math.max(canvas.height, window.screen.availHeight || 1440);
+        VW = W; VH = H;
+        const cx = VW / 2, cy = VH / 2;
+        const R = Math.sqrt(VW * VW + VH * VH) / 2;
+        const n = Math.min(Math.floor(Math.PI * R * R / 700), 5000);
+        for (let i = 0; i < n; i++) {
+          const size = Math.random() < 0.04 ? Math.random() * 2 + 1.5
+            : Math.random() < 0.15 ? Math.random() * 1 + 0.8
+            : Math.random() * 0.6 + 0.2;
+          const angle = Math.random() * Math.PI * 2;
+          const r = R * Math.sqrt(Math.random());
+          stars.push({
+            x: cx + r * Math.cos(angle),
+            y: cy + r * Math.sin(angle),
+            size,
+            base: Math.random() * 0.4 + (size > 1.5 ? 0.85 : 0.55),
+            speed: Math.random() * 1.2 + 0.2,
+            phase: Math.random() * Math.PI * 2,
+            hue: [0, 210, 220, 40][Math.floor(Math.random() * 4)],
+          });
+        }
+      }
+
+      const ROT_SPEED = 0.024;
+
+      function draw(ts) {
+        const t = ts / 1000;
+        const cx = VW / 2, cy = VH / 2;
+        const rot = t * ROT_SPEED;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        ctx.translate(-cx, -cy);
+
+        NEBULAE.forEach(n => {
+          const [r, g, b] = n.color;
+          const nx = n.rx * VW, ny = n.ry * VH;
+          const radius = n.r * Math.min(VW, VH);
+          const grd = ctx.createRadialGradient(nx, ny, 0, nx, ny, radius);
+          grd.addColorStop(0, `rgba(${r},${g},${b},0.13)`);
+          grd.addColorStop(0.5, `rgba(${r},${g},${b},0.05)`);
+          grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        stars.forEach(s => {
+          const opacity = s.base * (0.55 + 0.45 * Math.sin(t * s.speed + s.phase));
+          ctx.globalAlpha = opacity;
+          if (s.size > 1.2) {
+            const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 4);
+            glow.addColorStop(0, `hsla(${s.hue},80%,95%,0.6)`);
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = `hsl(${s.hue},60%,92%)`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        ctx.restore();
+
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      buildStars();
+      requestAnimationFrame(draw);
+    })();
+
+    // Login form handler
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('error-msg');
+
+      errorMsg.textContent = '';
+
+      // TODO: Replace with actual authentication logic
+      if (!username || !password) {
+        errorMsg.textContent = 'Please fill in all fields.';
+        return;
+      }
+
+      errorMsg.textContent = 'Invalid username or password.';
+    });
+  </script>
+</body>
+</html>
