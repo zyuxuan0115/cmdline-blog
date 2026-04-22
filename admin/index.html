@@ -129,22 +129,8 @@
       box-shadow: none;
     }
 
-    .girl {
-      position: fixed;
-      bottom: 0;
-      left: 32px;
-      height: 200px;
-      z-index: 1;
-    }
-
-    .blonde-girl {
-      position: fixed;
-      bottom: 0;
-      right: 32px;
-      height: 200px;
-      z-index: 1;
-    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
   <canvas id="space-bg"></canvas>
@@ -163,8 +149,6 @@
       <button type="submit">Login</button>
     </form>
   </div>
-  <img class="girl" src="../pic/girl.png" alt="">
-  <img class="blonde-girl" src="../pic/blonde_girl.png" alt="">
 
   <script>
     // Starfield background (same as register page)
