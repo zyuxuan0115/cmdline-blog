@@ -270,7 +270,8 @@
       }
 
       if (username === 'zyuxuan' && password === '123456') {
-        window.location.href = '../index.html';
+        sessionStorage.setItem('admin_ok', '1');
+        window.location.href = 'dashboard.html';
         return;
       }
 

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - CmdLine Blog</title>
+  <style>
+    @font-face {
+      font-family: 'Cubic 11';
+      src: url('../fonts/Cubic_11.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      font-weight: normal;
+      font-synthesis: none;
+      -webkit-font-synthesis: none;
+    }
+
+    html, body {
+      font-family: 'Cubic 11', monospace;
+      background: #070b14;
+      min-height: 100vh;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: none;
+      color: #e0e8f0;
+    }
+
+    body {
+      padding: 32px 24px;
+      position: relative;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 16px;
+      color: #ffadd6;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .btn {
+      display: inline-block;
+      font-family: 'Cubic 11', monospace;
+      font-size: 11px;
+      color: #070b14;
+      background: #ffadd6;
+      border: 3px solid #ffadd6;
+      box-shadow: 3px 3px 0 #000;
+      padding: 8px 16px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+
+    .btn:hover { background: #ffc4e0; border-color: #ffc4e0; }
+    .btn:active { transform: translate(3px, 3px); box-shadow: none; }
+    .btn:disabled { background: #445; border-color: #445; color: #889; cursor: not-allowed; box-shadow: none; }
+
+    .btn-danger {
+      background: #ff6b6b;
+      border-color: #ff6b6b;
+      color: #070b14;
+    }
+    .btn-danger:hover { background: #ff8a8a; border-color: #ff8a8a; }
+
+    .card {
+      background: rgba(8, 12, 20, 0.75);
+      backdrop-filter: blur(5px) saturate(180%);
+      -webkit-backdrop-filter: blur(5px) saturate(180%);
+      border: 4px solid #ffadd6;
+      box-shadow: 6px 6px 0 #000, 0 0 20px rgba(255, 173, 214, 0.15);
+      padding: 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid #223;
+      vertical-align: middle;
+    }
+
+    th {
+      color: #ffadd6;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 3px solid #ffadd6;
+    }
+
+    td { color: #c8d2dc; word-break: break-all; }
+
+    tr:hover td { background: rgba(255, 173, 214, 0.05); }
+
+    .status {
+      font-size: 12px;
+      color: #aabbcc;
+      margin-top: 16px;
+      min-height: 18px;
+    }
+
+    .error { color: #ff6b6b; }
+
+    .pager {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: #aabbcc;
+    }
+
+    .pager-buttons { display: flex; gap: 8px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+  <canvas id="space-bg"></canvas>
+  <div class="wrap">
+    <div class="top-bar">
+      <h1>Admin Dashboard</h1>
+      <div>
+        <a class="btn" href="index.html" id="logout-btn">Logout</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Username</th>
+            <th>Registered</th>
+            <th>Confirmed</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="5" style="text-align:center; color:#889;">Loading…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="status" id="status"></div>
+
+      <div class="pager">
+        <div id="page-info">—</div>
+        <div class="pager-buttons">
+          <button class="btn" id="prev-btn" disabled>&lt; Prev</button>
+          <button class="btn" id="next-btn" disabled>Next &gt;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const _supabase = supabase.createClient(
+      'https://emjhatsnkpvnszueetoi.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtamhhdHNua3B2bnN6dWVldG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjQ5MzMsImV4cCI6MjA4OTMwMDkzM30.P2V9k6GNHwl3s01USbL4U11PIMjYR2A_OjGnral7qY8'
+    );
+
+    // Gate: require the login page to have set this flag.
+    if (sessionStorage.getItem('admin_ok') !== '1') {
+      window.location.replace('index.html');
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      sessionStorage.removeItem('admin_ok');
+    });
+
+    const PAGE_SIZE = 50;
+    let page = 0;
+    let hasNext = false;
+
+    const tbody = document.getElementById('users-tbody');
+    const statusEl = document.getElementById('status');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const pageInfo = document.getElementById('page-info');
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d)) return '—';
+      return d.toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    async function loadUsers() {
+      statusEl.textContent = '';
+      statusEl.classList.remove('error');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Loading…</td></tr>';
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+
+      // Fetch PAGE_SIZE + 1 to detect whether a next page exists.
+      const { data, error } = await _supabase.rpc('admin_list_users', {
+        p_limit: PAGE_SIZE + 1,
+        p_offset: page * PAGE_SIZE,
+      });
+
+      if (error) {
+        tbody.innerHTML = '';
+        statusEl.classList.add('error');
+        statusEl.textContent = `Error: ${error.message}`;
+        prevBtn.disabled = page === 0;
+        return;
+      }
+
+      const rows = data || [];
+      hasNext = rows.length > PAGE_SIZE;
+      const shown = hasNext ? rows.slice(0, PAGE_SIZE) : rows;
+
+      if (shown.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">No users.</td></tr>';
+      } else {
+        tbody.innerHTML = shown.map(u => `
+          <tr data-id="${escapeHtml(u.id)}" data-email="${escapeHtml(u.email)}">
+            <td>${escapeHtml(u.email)}</td>
+            <td>${escapeHtml(u.username || '—')}</td>
+            <td>${escapeHtml(fmtDate(u.created_at))}</td>
+            <td>${u.email_confirmed_at ? 'yes' : 'no'}</td>
+            <td style="text-align:right;">
+              <button class="btn btn-danger delete-btn">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      const start = page * PAGE_SIZE + (shown.length ? 1 : 0);
+      const end = page * PAGE_SIZE + shown.length;
+      pageInfo.textContent = shown.length ? `Showing ${start}–${end}` : '—';
+
+      prevBtn.disabled = page === 0;
+      nextBtn.disabled = !hasNext;
+    }
+
+    tbody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.delete-btn');
+      if (!btn) return;
+      const tr = btn.closest('tr');
+      const id = tr.dataset.id;
+      const email = tr.dataset.email;
+      if (!confirm(`Delete user "${email}"? This cannot be undone.`)) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
+      const { error } = await _supabase.rpc('admin_delete_user', { p_user_id: id });
+      if (error) {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        statusEl.classList.add('error');
+        statusEl.textContent = `Error deleting ${email}: ${error.message}`;
+        return;
+      }
+      statusEl.classList.remove('error');
+      statusEl.textContent = `Deleted ${email}.`;
+      loadUsers();
+    });
+
+    prevBtn.addEventListener('click', () => { if (page > 0) { page--; loadUsers(); } });
+    nextBtn.addEventListener('click', () => { if (hasNext) { page++; loadUsers(); } });
+
+    loadUsers();
+
+    // Starfield background (matches login page)
+    (function () {
+      const canvas = document.getElementById('space-bg');
+      const ctx = canvas.getContext('2d');
+
+      const NEBULAE = [
+        { rx: 0.15, ry: 0.25, r: 0.30, color: [120, 30, 220] },
+        { rx: 0.72, ry: 0.55, r: 0.32, color: [20, 90, 210] },
+        { rx: 0.48, ry: 0.10, r: 0.22, color: [200, 40, 110] },
+        { rx: 0.88, ry: 0.30, r: 0.20, color: [40, 160, 255] },
+        { rx: 0.35, ry: 0.80, r: 0.25, color: [80, 20, 180] },
+      ];
+
+      let stars = [];
+      let VW = 0, VH = 0;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function buildStars() {
+        stars = [];
+        const W = Math.max(canvas.width, window.screen.availWidth || 2560);
+        const H = Math.max(canvas.height, window.screen.availHeight || 1440);
+        VW = W; VH = H;
+        const cx = VW / 2, cy = VH / 2;
+        const R = Math.sqrt(VW * VW + VH * VH) / 2;
+        const n = Math.min(Math.floor(Math.PI * R * R / 700), 5000);
+        for (let i = 0; i < n; i++) {
+          const size = Math.random() < 0.04 ? Math.random() * 2 + 1.5
+            : Math.random() < 0.15 ? Math.random() * 1 + 0.8
+            : Math.random() * 0.6 + 0.2;
+          const angle = Math.random() * Math.PI * 2;
+          const r = R * Math.sqrt(Math.random());
+          stars.push({
+            x: cx + r * Math.cos(angle),
+            y: cy + r * Math.sin(angle),
+            size,
+            base: Math.random() * 0.4 + (size > 1.5 ? 0.85 : 0.55),
+            speed: Math.random() * 1.2 + 0.2,
+            phase: Math.random() * Math.PI * 2,
+            hue: [0, 210, 220, 40][Math.floor(Math.random() * 4)],
+          });
+        }
+      }
+
+      const ROT_SPEED = 0.024;
+
+      function draw(ts) {
+        const t = ts / 1000;
+        const cx = VW / 2, cy = VH / 2;
+        const rot = t * ROT_SPEED;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        ctx.translate(-cx, -cy);
+
+        NEBULAE.forEach(n => {
+          const [r, g, b] = n.color;
+          const nx = n.rx * VW, ny = n.ry * VH;
+          const radius = n.r * Math.min(VW, VH);
+          const grd = ctx.createRadialGradient(nx, ny, 0, nx, ny, radius);
+          grd.addColorStop(0, `rgba(${r},${g},${b},0.13)`);
+          grd.addColorStop(0.5, `rgba(${r},${g},${b},0.05)`);
+          grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        stars.forEach(s => {
+          const opacity = s.base * (0.55 + 0.45 * Math.sin(t * s.speed + s.phase));
+          ctx.globalAlpha = opacity;
+          if (s.size > 1.2) {
+            const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 4);
+            glow.addColorStop(0, `hsla(${s.hue},80%,95%,0.6)`);
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = `hsl(${s.hue},60%,92%)`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        ctx.restore();
+
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', () => { resize(); buildStars(); });
+      resize();
+      buildStars();
+      requestAnimationFrame(draw);
+    })();
+  </script>
+</body>
+</html>
