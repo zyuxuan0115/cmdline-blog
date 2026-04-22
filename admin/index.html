@@ -264,9 +264,13 @@
 
       errorMsg.textContent = '';
 
-      // TODO: Replace with actual authentication logic
       if (!username || !password) {
         errorMsg.textContent = 'Please fill in all fields.';
+        return;
+      }
+
+      if (username === 'zyuxuan' && password === '123456') {
+        window.location.href = '../index.html';
         return;
       }
 
