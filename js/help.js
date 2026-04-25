@@ -4,8 +4,8 @@ const HELP_SECTIONS = [
   {
     title: 'Documents',
     entries: [
-      ['create &lt;filename&gt; [--public]', 'create a new document'],
-      ['new &lt;filename&gt;',              'alias for create'],
+      ['create [--title \'...\'] [--public]', 'create a new document'],
+      ['new [--title \'...\'] [--public]',    'alias for create'],
       ['open &lt;index|filename&gt;',      'open / focus a document'],
       ['close &lt;filename&gt;',           'close a document window'],
       ['list',                           'all public + your private docs'],

@@ -18,19 +18,24 @@ const COMMANDS = {
 
   async create(args) {
     if (!requireLogin()) return;
-    const parts = args.trim().split(/\s+/);
-    const name = parts[0];
-    if (!name) { print('Usage: create <filename> [--public]', 'error'); return; }
-    if (docs[name] || await dbFileExists(name)) {
-      print(`Error: "${name}" already exists. Use  open ${name}  to open it.`, 'error');
-      return;
-    }
-    const vis = parts.includes('--public') ? 'public' : 'private';
+    const argsStr = args.trim();
+    const titleMatch = argsStr.match(/--title\s+'([^']*)'/);
+    const title = titleMatch ? titleMatch[1] : '';
+    const remaining = argsStr.replace(/--title\s+'[^']*'/, '');
+    const isPublic = /(?:^|\s)--public(?:\s|$)/.test(remaining);
+    const vis = isPublic ? 'public' : 'private';
+
+    // 32-byte (256-bit) random id, hex-encoded → 64 chars
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const filename = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
     const authorName = currentUser.user_metadata?.username || currentUser.email;
-    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename: name, content: '', visibility: vis, title: '', author_name: authorName });
+    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename, content: '', visibility: vis, title, author_name: authorName });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
-    openDocument(name, '', vis, '', 'edit');
-    print(`Created document: ${name} [${vis}]`, 'success');
+    openDocument(filename, '', vis, title, 'edit');
+    const label = title || `${filename.slice(0, 8)}…`;
+    print(`Created document: ${label} [${vis}]`, 'success');
   },
 
   new(args) { COMMANDS.create(args); },
