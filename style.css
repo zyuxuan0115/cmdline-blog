@@ -719,6 +719,11 @@ input, textarea, button, select {
 }
 .tag-add-input:focus { border-color: #ff69b4; }
 
+.doc-window.preview-mode .tag-add-input,
+.doc-window.preview-mode .tag-pill-remove {
+  display: none;
+}
+
 /* Minimized state */
 .doc-window.minimized .doc-title-bar,
 .doc-window.minimized .doc-toolbar,
