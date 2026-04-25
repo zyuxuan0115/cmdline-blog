@@ -165,6 +165,11 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   const savedIndicator = document.createElement('span');
   savedIndicator.className = 'doc-saved';
 
+  const tagAddInput = document.createElement('input');
+  tagAddInput.className = 'tag-add-input';
+  tagAddInput.placeholder = '+ add tag';
+  tagAddInput.title = 'Type a tag name and press Enter';
+
   toolbar.appendChild(uploadLabel);
   toolbar.appendChild(visBtn);
   toolbar.appendChild(tagAddInput);
@@ -176,11 +181,6 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
 
   const tagPillsEl = document.createElement('div');
   tagPillsEl.className = 'tag-pills';
-
-  const tagAddInput = document.createElement('input');
-  tagAddInput.className = 'tag-add-input';
-  tagAddInput.placeholder = '+ add tag';
-  tagAddInput.title = 'Type a tag name and press Enter';
 
   tagbar.appendChild(tagPillsEl);
 
