@@ -165,24 +165,23 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   const savedIndicator = document.createElement('span');
   savedIndicator.className = 'doc-saved';
 
+  const tagPillsEl = document.createElement('div');
+  tagPillsEl.className = 'tag-pills';
+
   const tagAddInput = document.createElement('input');
   tagAddInput.className = 'tag-add-input';
   tagAddInput.placeholder = '+ add tag';
   tagAddInput.title = 'Type a tag name and press Enter';
 
-  toolbar.appendChild(uploadLabel);
-  toolbar.appendChild(visBtn);
-  toolbar.appendChild(tagAddInput);
-  toolbar.appendChild(savedIndicator);
-
-  // ── Tag bar ──
-  const tagbar = document.createElement('div');
-  tagbar.className = 'doc-tagbar';
-
-  const tagPillsEl = document.createElement('div');
-  tagPillsEl.className = 'tag-pills';
-
-  tagbar.appendChild(tagPillsEl);
+  if (!readOnly) {
+    toolbar.appendChild(uploadLabel);
+    toolbar.appendChild(visBtn);
+  }
+  toolbar.appendChild(tagPillsEl);
+  if (!readOnly) {
+    toolbar.appendChild(tagAddInput);
+    toolbar.appendChild(savedIndicator);
+  }
 
   async function refreshTagBar() {
     tagPillsEl.innerHTML = '';
@@ -245,8 +244,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   // ── Assemble ──
   win.appendChild(titlebar);
   win.appendChild(titleBar);
-  if (!readOnly) win.appendChild(toolbar);
-  win.appendChild(tagbar);
+  if (!readOnly || (staticTags && staticTags.length > 0)) win.appendChild(toolbar);
   win.appendChild(content);
   win.appendChild(resize);
 

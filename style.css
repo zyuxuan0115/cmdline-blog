@@ -676,19 +676,6 @@ input, textarea, button, select {
   text-shadow: 2px 2px 0 #000;
 }
 
-/* Tag bar */
-.doc-tagbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 10px;
-  background: #161636;
-  border-bottom: 2px dashed #5a2d4d;
-  min-height: 36px;
-  flex-shrink: 0;
-}
-
 .tag-pills {
   display: flex;
   flex-wrap: wrap;
@@ -735,7 +722,6 @@ input, textarea, button, select {
 /* Minimized state */
 .doc-window.minimized .doc-title-bar,
 .doc-window.minimized .doc-toolbar,
-.doc-window.minimized .doc-tagbar,
 .doc-window.minimized .doc-content,
 .doc-window.minimized .doc-resize {
   display: none;
