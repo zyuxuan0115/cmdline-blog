@@ -23,7 +23,7 @@ async function authRegister(args) {
     if (codeErr) { print(`Error: ${codeErr.message}`, 'error'); return; }
     if (!codeData) { print('Error: invalid invitation code.', 'error'); return; }
     print(`Registering ${username}…`, 'muted');
-    const { error } = await _supabase.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: 'https://kate0115.net/apps/cmdline-blog/register.html' } });
+    const { error } = await _supabase.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: 'https://kate0115.net/apps/register.html' } });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
     print(`Registered! Check your email (${email}) to confirm your account.`, 'success');
   };
