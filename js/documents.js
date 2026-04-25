@@ -167,6 +167,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
 
   toolbar.appendChild(uploadLabel);
   toolbar.appendChild(visBtn);
+  toolbar.appendChild(tagAddInput);
   toolbar.appendChild(savedIndicator);
 
   // ── Tag bar ──
@@ -182,7 +183,6 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   tagAddInput.title = 'Type a tag name and press Enter';
 
   tagbar.appendChild(tagPillsEl);
-  if (!readOnly) tagbar.appendChild(tagAddInput);
 
   async function refreshTagBar() {
     tagPillsEl.innerHTML = '';
