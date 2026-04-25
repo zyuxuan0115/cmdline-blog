@@ -6,7 +6,7 @@ const HELP_SECTIONS = [
     entries: [
       ['create &lt;filename&gt; [--public]', 'create a new document'],
       ['new &lt;filename&gt;',              'alias for create'],
-      ['open &lt;filename&gt;',            'open / focus a document'],
+      ['open &lt;index|filename&gt;',      'open / focus a document'],
       ['close &lt;filename&gt;',           'close a document window'],
       ['list',                           'all public + your private docs'],
       ['list public',                    'all public docs'],
@@ -53,6 +53,7 @@ const helpSidebar = document.getElementById('help-sidebar');
 const helpContent = document.getElementById('help-sidebar-content');
 const sidebarTitle = document.getElementById('help-sidebar-title');
 let currentSidebarView = null; // 'help' or 'list'
+let lastListedDocs = []; // docs from the most recent  list  command, in display order
 
 function buildHelpHTML() {
   return HELP_SECTIONS.map(section => `
@@ -65,17 +66,18 @@ function buildHelpHTML() {
   `).join('');
 }
 
-function buildDocEntry(doc, isMine) {
+function buildDocEntry(doc, isMine, index) {
   const { filename, title, visibility, tags, updated_at, author_name } = doc;
   const displayTitle = title ? `<code>${title}</code>` : `<code>${filename}</code>`;
+  const indexStr = index != null ? `<span style="color:#556677">${index}.</span> ` : '';
   const fileLabel = title && isMine ? `<br><span style="color:#556677;font-size:0.85em">${filename}</span>` : '';
   const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
   const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
   const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
   const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
-  const clickAttr = isMine ? ` style="cursor:pointer" onclick="runCommand('open ${filename}')"` : '';
-  return `<div class="help-entry"${clickAttr}>${displayTitle}${open}${vis}${author}${fileLabel}${tagStr}${timeStr}</div>`;
+  const clickAttr = index != null ? ` style="cursor:pointer" onclick="runCommand('open ${index}')"` : '';
+  return `<div class="help-entry"${clickAttr}>${indexStr}${displayTitle}${open}${vis}${author}${fileLabel}${tagStr}${timeStr}</div>`;
 }
 
 function buildListHTML(documents, sectionTitle, isMine) {
@@ -85,7 +87,7 @@ function buildListHTML(documents, sectionTitle, isMine) {
   return `
     <div class="help-section">
       <div class="help-section-title">${sectionTitle} (${documents.length})</div>
-      ${documents.map(doc => buildDocEntry(doc, isMine)).join('')}
+      ${documents.map((doc, i) => buildDocEntry(doc, isMine, i + 1)).join('')}
     </div>
   `;
 }
@@ -135,19 +137,22 @@ async function openListSidebar(filter) {
     const { data, error } = await _supabase.from('documents').select(fields).eq('visibility', 'public').order('updated_at', { ascending: false });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
     title = 'Public Documents';
-    html = buildListHTML(data, title, false);
+    lastListedDocs = data || [];
+    html = buildListHTML(lastListedDocs, title, false);
   } else if (filter === 'mywork') {
     // All of current user's posts (public + private)
     const { data, error } = await _supabase.from('documents').select(fields).eq('user_id', currentUser.id).order('updated_at', { ascending: false });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
     title = 'My Documents';
-    html = buildListHTML(data, title, true);
+    lastListedDocs = data || [];
+    html = buildListHTML(lastListedDocs, title, true);
   } else if (filter === 'private') {
     // Current user's private posts only
     const { data, error } = await _supabase.from('documents').select(fields).eq('user_id', currentUser.id).eq('visibility', 'private').order('updated_at', { ascending: false });
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
     title = 'Private Documents';
-    html = buildListHTML(data, title, true);
+    lastListedDocs = data || [];
+    html = buildListHTML(lastListedDocs, title, true);
   } else {
     // Default: all public + current user's private, sorted newest first
     const { data: myPrivate, error: myErr } = await _supabase.from('documents').select(fields).eq('user_id', currentUser.id).eq('visibility', 'private').order('updated_at', { ascending: false });
@@ -157,6 +162,7 @@ async function openListSidebar(filter) {
     // Merge and sort by updated_at descending
     const all = [...myPrivate, ...allPublic].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
     title = 'All Documents';
+    lastListedDocs = all;
     html = buildListHTML(all, title, false).replace(
       // For own docs, re-render entries to make them clickable
       new RegExp('', ''), ''
@@ -168,7 +174,7 @@ async function openListSidebar(filter) {
       html = `
         <div class="help-section">
           <div class="help-section-title">${title} (${all.length})</div>
-          ${all.map(doc => buildDocEntry(doc, doc.user_id === currentUser.id)).join('')}
+          ${all.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.id, i + 1)).join('')}
         </div>
       `;
     }

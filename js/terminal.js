@@ -37,8 +37,36 @@ const COMMANDS = {
 
   async open(args) {
     if (!requireLogin()) return;
-    const name = args.trim();
-    if (!name) { print('Usage: open <filename>', 'error'); return; }
+    const arg = args.trim();
+    if (!arg) { print('Usage: open <index|filename>', 'error'); return; }
+
+    // Numeric → resolve via the most recent  list  output
+    if (/^\d+$/.test(arg)) {
+      const idx = parseInt(arg, 10);
+      if (idx < 1 || idx > lastListedDocs.length) {
+        print(`Error: index ${idx} not in last list. Run  list  first.`, 'error');
+        return;
+      }
+      const entry = lastListedDocs[idx - 1];
+      const isMine = entry.user_id === currentUser.id;
+      const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
+      if (docs[key]) {
+        focusWindow(docs[key].win);
+        print(`Focused: ${key}`, 'success');
+        return;
+      }
+      let q = _supabase.from('documents').select('content, visibility, title, tags').eq('filename', entry.filename).eq('user_id', entry.user_id);
+      if (!isMine) q = q.eq('visibility', 'public');
+      const { data, error } = await q.maybeSingle();
+      if (error) { print(`Error: ${error.message}`, 'error'); return; }
+      if (!data) { print(`Error: document not found.`, 'error'); return; }
+      openDocument(key, data.content, data.visibility, data.title || '', 'preview', !isMine, data.tags || []);
+      print(`Opened: ${key}${isMine ? '' : ' (read-only)'}`, 'success');
+      return;
+    }
+
+    // Filename → own docs only
+    const name = arg;
     if (docs[name]) {
       focusWindow(docs[name].win);
       print(`Focused: ${name}`, 'success');

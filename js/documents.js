@@ -1,9 +1,9 @@
 // ─── Document Windows ─────────────────────────────────────────────────────────
 
-function openDocument(name, content = '', visibility = 'private', title = '', initialMode = 'edit') {
-  const win = buildWindow(name, content, visibility, title, initialMode);
+function openDocument(name, content = '', visibility = 'private', title = '', initialMode = 'edit', readOnly = false, staticTags = null) {
+  const win = buildWindow(name, content, visibility, title, initialMode, readOnly, staticTags);
   container.appendChild(win);
-  docs[name] = { content, win, visibility };
+  docs[name] = { content, win, visibility, readOnly };
   focusWindow(win);
   updateHint();
 }
@@ -41,7 +41,8 @@ function updateHint() {
 
 // ─── Window Builder ───────────────────────────────────────────────────────────
 
-function buildWindow(name, initialContent = '', initialVisibility = 'private', initialTitle = '', initialMode = 'edit') {
+function buildWindow(name, initialContent = '', initialVisibility = 'private', initialTitle = '', initialMode = 'edit', readOnly = false, staticTags = null) {
+  if (readOnly) initialMode = 'preview';
   const win = document.createElement('div');
   win.className = 'doc-window';
 
@@ -96,8 +97,10 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   const btnEdit    = makeBtn('Edit',    'doc-tab active');
   const btnPreview = makeBtn('Preview', 'doc-tab');
 
-  tabGroup.appendChild(btnEdit);
-  tabGroup.appendChild(btnPreview);
+  if (!readOnly) {
+    tabGroup.appendChild(btnEdit);
+    tabGroup.appendChild(btnPreview);
+  }
 
   titlebar.appendChild(lights);
   titlebar.appendChild(titleEl);
@@ -112,18 +115,21 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   titleInput.type = 'text';
   titleInput.placeholder = 'Untitled';
   titleInput.value = initialTitle;
+  titleInput.readOnly = readOnly;
   titleBar.appendChild(titleInput);
 
-  let titleSaveTimer;
-  titleInput.addEventListener('input', () => {
-    clearTimeout(titleSaveTimer);
-    titleSaveTimer = setTimeout(() => {
-      _supabase.from('documents')
-        .update({ title: titleInput.value })
-        .eq('user_id', currentUser.id).eq('filename', name)
-        .then(() => {});
-    }, 800);
-  });
+  if (!readOnly) {
+    let titleSaveTimer;
+    titleInput.addEventListener('input', () => {
+      clearTimeout(titleSaveTimer);
+      titleSaveTimer = setTimeout(() => {
+        _supabase.from('documents')
+          .update({ title: titleInput.value })
+          .eq('user_id', currentUser.id).eq('filename', name)
+          .then(() => {});
+      }, 800);
+    });
+  }
 
   // ── Toolbar ──
   const toolbar = document.createElement('div');
@@ -176,35 +182,41 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   tagAddInput.title = 'Type a tag name and press Enter';
 
   tagbar.appendChild(tagPillsEl);
-  tagbar.appendChild(tagAddInput);
+  if (!readOnly) tagbar.appendChild(tagAddInput);
 
   async function refreshTagBar() {
     tagPillsEl.innerHTML = '';
-    const tags = await getTags(name);
+    const tags = readOnly ? (staticTags || []) : await getTags(name);
     tags.forEach(tag => {
       const pill = document.createElement('span');
       pill.className = 'tag-pill';
-      pill.innerHTML = `#${tag} <button class="tag-pill-remove" title="Remove tag">×</button>`;
-      pill.querySelector('.tag-pill-remove').addEventListener('click', async e => {
-        e.stopPropagation();
-        await removeFileTag(name, tag);
-      });
+      pill.innerHTML = readOnly
+        ? `#${tag}`
+        : `#${tag} <button class="tag-pill-remove" title="Remove tag">×</button>`;
+      if (!readOnly) {
+        pill.querySelector('.tag-pill-remove').addEventListener('click', async e => {
+          e.stopPropagation();
+          await removeFileTag(name, tag);
+        });
+      }
       tagPillsEl.appendChild(pill);
     });
   }
 
-  tagAddInput.addEventListener('keydown', async e => {
-    if (e.key === 'Enter') {
-      const tag = tagAddInput.value.trim().replace(/\s+/g, '-').replace(/^#+/, '');
-      tagAddInput.value = '';
-      if (!tag) return;
-      if (await addFileTag(name, tag)) {
-        print(`Tagged "${name}" with #${tag}`, 'success');
-      } else {
-        print(`"${name}" already has tag #${tag}`, 'info');
+  if (!readOnly) {
+    tagAddInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter') {
+        const tag = tagAddInput.value.trim().replace(/\s+/g, '-').replace(/^#+/, '');
+        tagAddInput.value = '';
+        if (!tag) return;
+        if (await addFileTag(name, tag)) {
+          print(`Tagged "${name}" with #${tag}`, 'success');
+        } else {
+          print(`"${name}" already has tag #${tag}`, 'info');
+        }
       }
-    }
-  });
+    });
+  }
 
   // Expose refresh so tag commands can update an open window
   win._refreshTagBar = refreshTagBar;
@@ -218,6 +230,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   editor.className = 'doc-editor';
   editor.placeholder = 'Start typing… Markdown is supported.\n\n# Heading\n**bold** _italic_ `code`\n\n> blockquote\n\n- list item';
   editor.spellcheck = true;
+  editor.readOnly = readOnly;
 
   const preview = document.createElement('div');
   preview.className = 'doc-preview';
@@ -232,7 +245,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   // ── Assemble ──
   win.appendChild(titlebar);
   win.appendChild(titleBar);
-  win.appendChild(toolbar);
+  if (!readOnly) win.appendChild(toolbar);
   win.appendChild(tagbar);
   win.appendChild(content);
   win.appendChild(resize);
@@ -264,25 +277,27 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     visBtn.style.display = 'none';
   }
 
-  btnEdit.addEventListener('click', switchToEdit);
-  btnPreview.addEventListener('click', switchToPreview);
+  if (!readOnly) {
+    btnEdit.addEventListener('click', switchToEdit);
+    btnPreview.addEventListener('click', switchToPreview);
 
-  // Auto-save indicator
-  let saveTimer;
-  editor.addEventListener('input', () => {
-    docs[name].content = editor.value;
-    savedIndicator.textContent = 'unsaved';
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      savedIndicator.textContent = 'saving…';
-      _supabase.from('documents')
-        .update({ content: editor.value, updated_at: new Date().toISOString() })
-        .eq('user_id', currentUser.id).eq('filename', name)
-        .then(({ error }) => {
-          savedIndicator.textContent = error ? 'save failed ✗' : 'saved ✓';
-        });
-    }, 800);
-  });
+    // Auto-save indicator
+    let saveTimer;
+    editor.addEventListener('input', () => {
+      docs[name].content = editor.value;
+      savedIndicator.textContent = 'unsaved';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        savedIndicator.textContent = 'saving…';
+        _supabase.from('documents')
+          .update({ content: editor.value, updated_at: new Date().toISOString() })
+          .eq('user_id', currentUser.id).eq('filename', name)
+          .then(({ error }) => {
+            savedIndicator.textContent = error ? 'save failed ✗' : 'saved ✓';
+          });
+      }, 800);
+    });
+  }
 
   // Load content then apply initial mode (order matters — preview reads editor.value)
   if (initialContent) {
