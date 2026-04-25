@@ -430,27 +430,33 @@ input, textarea, button, select {
 
 .doc-tab-group {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: -4px;
+  position: relative;
+  z-index: 2;
 }
 
 .doc-tab {
-  padding: 5px 10px;
+  padding: 6px 14px;
   border: 2px solid #000;
-  background: #2a2a4a;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #1f1f3a;
   cursor: pointer;
   font-family: 'Cubic 11', monospace;
   font-size: 8px;
   color: #8a8aa8;
-  box-shadow: 2px 2px 0 #000;
   transition: none;
+  position: relative;
 }
-.doc-tab:hover { background: #5a2d4d; color: #f8f8f8; }
+.doc-tab:hover { background: #2f2f55; color: #f8f8f8; }
 .doc-tab.active {
-  background: #ff69b4;
-  color: #000;
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  background: #161636;
+  color: #ffadd6;
+  border-color: #ffadd6;
+  z-index: 3;
 }
 
 /* Document title bar */
