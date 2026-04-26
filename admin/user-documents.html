@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - CmdLine Blog</title>
+  <title>User Documents - CmdLine Blog Admin</title>
   <style>
     @font-face {
       font-family: 'Cubic 11';
@@ -70,6 +70,12 @@
       text-shadow: 2px 2px 0 #000;
     }
 
+    .subtitle {
+      font-size: 11px;
+      color: #aabbcc;
+      margin-top: 6px;
+    }
+
     .btn {
       display: inline-block;
       font-family: 'Cubic 11', monospace;
@@ -127,10 +133,16 @@
 
     td { color: #c8d2dc; word-break: break-all; }
 
-    .user-link { color: #ffadd6; text-decoration: none; }
-    .user-link:hover { color: #ffc4e0; text-decoration: underline; }
-
     tr:hover td { background: rgba(255, 173, 214, 0.05); }
+
+    .pill {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border: 2px solid currentColor;
+    }
+    .pill-public { color: #88aaff; }
+    .pill-private { color: #889; }
 
     .status {
       font-size: 12px;
@@ -140,17 +152,6 @@
     }
 
     .error { color: #ff6b6b; }
-
-    .pager {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 20px;
-      font-size: 12px;
-      color: #aabbcc;
-    }
-
-    .pager-buttons { display: flex; gap: 8px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
@@ -158,9 +159,12 @@
   <canvas id="space-bg"></canvas>
   <div class="wrap">
     <div class="top-bar">
-      <h1>Admin Dashboard</h1>
       <div>
-        <a class="btn" href="index.html" id="logout-btn">Logout</a>
+        <h1 id="page-title">User Documents</h1>
+        <div class="subtitle" id="user-subtitle">—</div>
+      </div>
+      <div>
+        <a class="btn" href="dashboard.html">&lt; Back</a>
       </div>
     </div>
 
@@ -168,27 +172,19 @@
       <table>
         <thead>
           <tr>
-            <th>Email</th>
-            <th>Username</th>
-            <th>Registered</th>
-            <th>Confirmed</th>
+            <th>Title</th>
+            <th>Filename</th>
+            <th>Visibility</th>
+            <th>Updated</th>
             <th></th>
           </tr>
         </thead>
-        <tbody id="users-tbody">
+        <tbody id="docs-tbody">
           <tr><td colspan="5" style="text-align:center; color:#889;">Loading…</td></tr>
         </tbody>
       </table>
 
       <div class="status" id="status"></div>
-
-      <div class="pager">
-        <div id="page-info">—</div>
-        <div class="pager-buttons">
-          <button class="btn" id="prev-btn" disabled>&lt; Prev</button>
-          <button class="btn" id="next-btn" disabled>Next &gt;</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -198,24 +194,24 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtamhhdHNua3B2bnN6dWVldG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjQ5MzMsImV4cCI6MjA4OTMwMDkzM30.P2V9k6GNHwl3s01USbL4U11PIMjYR2A_OjGnral7qY8'
     );
 
-    // Gate: require the login page to have set this flag.
     if (sessionStorage.getItem('admin_ok') !== '1') {
       window.location.replace('index.html');
     }
 
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      sessionStorage.removeItem('admin_ok');
-    });
+    const params = new URLSearchParams(window.location.search);
+    const userId   = params.get('user_id');
+    const email    = params.get('email')    || '';
+    const username = params.get('username') || '';
 
-    const PAGE_SIZE = 50;
-    let page = 0;
-    let hasNext = false;
+    if (!userId) {
+      window.location.replace('dashboard.html');
+    }
 
-    const tbody = document.getElementById('users-tbody');
+    document.getElementById('page-title').textContent = `Documents — ${username || email || 'unknown'}`;
+    document.getElementById('user-subtitle').textContent = email ? `${email} · ${userId}` : userId;
+
+    const tbody    = document.getElementById('docs-tbody');
     const statusEl = document.getElementById('status');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const pageInfo = document.getElementById('page-info');
 
     function fmtDate(iso) {
       if (!iso) return '—';
@@ -230,86 +226,69 @@
       }[c]));
     }
 
-    async function loadUsers() {
+    function shortHash(s) {
+      const str = String(s ?? '');
+      return str.length > 16 ? str.slice(0, 12) + '…' : str;
+    }
+
+    async function loadDocs() {
       statusEl.textContent = '';
       statusEl.classList.remove('error');
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Loading…</td></tr>';
-      prevBtn.disabled = true;
-      nextBtn.disabled = true;
 
-      // Fetch PAGE_SIZE + 1 to detect whether a next page exists.
-      const { data, error } = await _supabase.rpc('admin_list_users', {
-        p_limit: PAGE_SIZE + 1,
-        p_offset: page * PAGE_SIZE,
-      });
-
+      const { data, error } = await _supabase.rpc('admin_list_user_documents', { p_user_id: userId });
       if (error) {
         tbody.innerHTML = '';
         statusEl.classList.add('error');
         statusEl.textContent = `Error: ${error.message}`;
-        prevBtn.disabled = page === 0;
         return;
       }
 
       const rows = data || [];
-      hasNext = rows.length > PAGE_SIZE;
-      const shown = hasNext ? rows.slice(0, PAGE_SIZE) : rows;
-
-      if (shown.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">No users.</td></tr>';
-      } else {
-        tbody.innerHTML = shown.map(u => {
-          const userDocsUrl = `user-documents.html?user_id=${encodeURIComponent(u.id)}&email=${encodeURIComponent(u.email)}&username=${encodeURIComponent(u.username || '')}`;
-          return `
-          <tr data-id="${escapeHtml(u.id)}" data-email="${escapeHtml(u.email)}">
-            <td>${escapeHtml(u.email)}</td>
-            <td><a class="user-link" href="${userDocsUrl}">${escapeHtml(u.username || '—')}</a></td>
-            <td>${escapeHtml(fmtDate(u.created_at))}</td>
-            <td>${u.email_confirmed_at ? 'yes' : 'no'}</td>
-            <td style="text-align:right;">
-              <button class="btn btn-danger delete-btn">Delete</button>
-            </td>
-          </tr>`;
-        }).join('');
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">No documents.</td></tr>';
+        return;
       }
 
-      const start = page * PAGE_SIZE + (shown.length ? 1 : 0);
-      const end = page * PAGE_SIZE + shown.length;
-      pageInfo.textContent = shown.length ? `Showing ${start}–${end}` : '—';
-
-      prevBtn.disabled = page === 0;
-      nextBtn.disabled = !hasNext;
+      tbody.innerHTML = rows.map(d => `
+        <tr data-filename="${escapeHtml(d.filename)}">
+          <td>${escapeHtml(d.title || '(untitled)')}</td>
+          <td title="${escapeHtml(d.filename)}">${escapeHtml(shortHash(d.filename))}</td>
+          <td><span class="pill ${d.visibility === 'public' ? 'pill-public' : 'pill-private'}">${escapeHtml(d.visibility)}</span></td>
+          <td>${escapeHtml(fmtDate(d.updated_at))}</td>
+          <td style="text-align:right;">
+            <button class="btn btn-danger delete-btn">Delete</button>
+          </td>
+        </tr>
+      `).join('');
     }
 
     tbody.addEventListener('click', async (e) => {
       const btn = e.target.closest('.delete-btn');
       if (!btn) return;
       const tr = btn.closest('tr');
-      const id = tr.dataset.id;
-      const email = tr.dataset.email;
-      if (!confirm(`Delete user "${email}" AND all their documents? This cannot be undone.`)) return;
+      const filename = tr.dataset.filename;
+      const label = shortHash(filename);
+      if (!confirm(`Delete document "${label}"? This cannot be undone.`)) return;
 
       btn.disabled = true;
       btn.textContent = 'Deleting…';
-      const { error } = await _supabase.rpc('admin_delete_user', { p_user_id: id });
+      const { error } = await _supabase.rpc('admin_delete_document', { p_user_id: userId, p_filename: filename });
       if (error) {
         btn.disabled = false;
         btn.textContent = 'Delete';
         statusEl.classList.add('error');
-        statusEl.textContent = `Error deleting ${email}: ${error.message}`;
+        statusEl.textContent = `Error deleting ${label}: ${error.message}`;
         return;
       }
       statusEl.classList.remove('error');
-      statusEl.textContent = `Deleted ${email}.`;
-      loadUsers();
+      statusEl.textContent = `Deleted ${label}.`;
+      loadDocs();
     });
 
-    prevBtn.addEventListener('click', () => { if (page > 0) { page--; loadUsers(); } });
-    nextBtn.addEventListener('click', () => { if (hasNext) { page++; loadUsers(); } });
+    loadDocs();
 
-    loadUsers();
-
-    // Starfield background (matches login page)
+    // Starfield background (matches dashboard / login)
     (function () {
       const canvas = document.getElementById('space-bg');
       const ctx = canvas.getContext('2d');
