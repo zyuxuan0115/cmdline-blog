@@ -68,10 +68,26 @@ const COMMANDS = {
 
   close(args) {
     const arg = args.trim();
-    if (!/^\d+$/.test(arg)) { print('Usage: close <index>', 'error'); return; }
+
+    // No arg → close the currently focused window
+    if (!arg) {
+      const focused = document.querySelector('.doc-window.focused');
+      const key = focused && Object.keys(docs).find(k => docs[k].win === focused);
+      if (!key) { print('No document is focused.', 'error'); return; }
+      closeDocument(key);
+      print(`Closed: ${key}`, 'success');
+      return;
+    }
+
+    // Numeric → only valid while the list sidebar is showing
+    if (!/^\d+$/.test(arg)) { print('Usage: close [<index>]', 'error'); return; }
+    if (currentSidebarView !== 'list') {
+      print('Error: list sidebar is not open. Run  list  first.', 'error');
+      return;
+    }
     const idx = parseInt(arg, 10);
     if (idx < 1 || idx > lastListedDocs.length) {
-      print(`Error: index ${idx} not in last list. Run  list  first.`, 'error');
+      print(`Error: index ${idx} not in last list.`, 'error');
       return;
     }
     const entry = lastListedDocs[idx - 1];
