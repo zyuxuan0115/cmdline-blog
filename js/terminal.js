@@ -43,53 +43,43 @@ const COMMANDS = {
   async open(args) {
     if (!requireLogin()) return;
     const arg = args.trim();
-    if (!arg) { print('Usage: open <index|filename>', 'error'); return; }
-
-    // Numeric → resolve via the most recent  list  output
-    if (/^\d+$/.test(arg)) {
-      const idx = parseInt(arg, 10);
-      if (idx < 1 || idx > lastListedDocs.length) {
-        print(`Error: index ${idx} not in last list. Run  list  first.`, 'error');
-        return;
-      }
-      const entry = lastListedDocs[idx - 1];
-      const isMine = entry.user_id === currentUser.id;
-      const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
-      if (docs[key]) {
-        focusWindow(docs[key].win);
-        print(`Focused: ${key}`, 'success');
-        return;
-      }
-      let q = _supabase.from('documents').select('content, visibility, title, tags').eq('filename', entry.filename).eq('user_id', entry.user_id);
-      if (!isMine) q = q.eq('visibility', 'public');
-      const { data, error } = await q.maybeSingle();
-      if (error) { print(`Error: ${error.message}`, 'error'); return; }
-      if (!data) { print(`Error: document not found.`, 'error'); return; }
-      openDocument(key, data.content, data.visibility, data.title || '', 'preview', !isMine, data.tags || []);
-      print(`Opened: ${key}${isMine ? '' : ' (read-only)'}`, 'success');
+    if (!/^\d+$/.test(arg)) { print('Usage: open <index>', 'error'); return; }
+    const idx = parseInt(arg, 10);
+    if (idx < 1 || idx > lastListedDocs.length) {
+      print(`Error: index ${idx} not in last list. Run  list  first.`, 'error');
       return;
     }
-
-    // Filename → own docs only
-    const name = arg;
-    if (docs[name]) {
-      focusWindow(docs[name].win);
-      print(`Focused: ${name}`, 'success');
+    const entry = lastListedDocs[idx - 1];
+    const isMine = entry.user_id === currentUser.id;
+    const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
+    if (docs[key]) {
+      focusWindow(docs[key].win);
+      print(`Focused: ${key}`, 'success');
       return;
     }
-    const { data, error } = await _supabase.from('documents').select('content, visibility, title').eq('user_id', currentUser.id).eq('filename', name).maybeSingle();
+    let q = _supabase.from('documents').select('content, visibility, title, tags').eq('filename', entry.filename).eq('user_id', entry.user_id);
+    if (!isMine) q = q.eq('visibility', 'public');
+    const { data, error } = await q.maybeSingle();
     if (error) { print(`Error: ${error.message}`, 'error'); return; }
-    if (!data) { print(`Error: "${name}" does not exist. Use  create ${name}  to create it.`, 'error'); return; }
-    openDocument(name, data.content, data.visibility, data.title || '', 'preview');
-    print(`Opened: ${name}`, 'success');
+    if (!data) { print(`Error: document not found.`, 'error'); return; }
+    openDocument(key, data.content, data.visibility, data.title || '', 'preview', !isMine, data.tags || []);
+    print(`Opened: ${key}${isMine ? '' : ' (read-only)'}`, 'success');
   },
 
   close(args) {
-    const name = args.trim();
-    if (!name) { print('Usage: close <filename>', 'error'); return; }
-    if (!docs[name]) { print(`"${name}" is not open.`, 'error'); return; }
-    closeDocument(name);
-    print(`Closed: ${name}`, 'success');
+    const arg = args.trim();
+    if (!/^\d+$/.test(arg)) { print('Usage: close <index>', 'error'); return; }
+    const idx = parseInt(arg, 10);
+    if (idx < 1 || idx > lastListedDocs.length) {
+      print(`Error: index ${idx} not in last list. Run  list  first.`, 'error');
+      return;
+    }
+    const entry = lastListedDocs[idx - 1];
+    const isMine = entry.user_id === currentUser.id;
+    const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
+    if (!docs[key]) { print(`"${key}" is not open.`, 'error'); return; }
+    closeDocument(key);
+    print(`Closed: ${key}`, 'success');
   },
 
   async list(args) {
