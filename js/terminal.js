@@ -44,9 +44,13 @@ const COMMANDS = {
     if (!requireLogin()) return;
     const arg = args.trim();
     if (!/^\d+$/.test(arg)) { print('Usage: open <index>', 'error'); return; }
+    if (currentSidebarView !== 'list') {
+      print('Error: list sidebar is not open. Run  list  first.', 'error');
+      return;
+    }
     const idx = parseInt(arg, 10);
     if (idx < 1 || idx > lastListedDocs.length) {
-      print(`Error: index ${idx} not in last list. Run  list  first.`, 'error');
+      print(`Error: index ${idx} not in last list.`, 'error');
       return;
     }
     const entry = lastListedDocs[idx - 1];
