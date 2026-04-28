@@ -183,4 +183,23 @@ async function openListSidebar(filter) {
   print('File list opened on the right.', 'muted');
 }
 
+function refreshListSidebarTags(filename, newTags) {
+  // Update cached array so subsequent reads (e.g. open) see fresh tags
+  for (const doc of lastListedDocs) {
+    if (doc.user_id === currentUser.id && doc.filename === filename) {
+      doc.tags = newTags;
+      break;
+    }
+  }
+  // Live re-render only when the list view is the one showing
+  if (currentSidebarView !== 'list') return;
+  const sectionTitle = sidebarTitle.textContent;
+  helpContent.innerHTML = lastListedDocs.length === 0
+    ? `<div class="help-section"><div class="help-section-title">${sectionTitle}</div><div class="help-entry"><span>No documents found.</span></div></div>`
+    : `<div class="help-section">
+         <div class="help-section-title">${sectionTitle}</div>
+         ${lastListedDocs.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.id, i + 1)).join('')}
+       </div>`;
+}
+
 document.getElementById('help-sidebar-close').addEventListener('click', closeHelpSidebar);
