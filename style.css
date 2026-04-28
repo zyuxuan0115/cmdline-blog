@@ -582,6 +582,13 @@ input, textarea, button, select {
   display: block;
 }
 
+.doc-preview a.doc-link {
+  color: #ffadd6;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.doc-preview a.doc-link:hover { color: #ffc4e0; }
+
 /* Markdown preview styles */
 .doc-preview h1, .doc-preview h2, .doc-preview h3 {
   margin: 1em 0 0.5em;

@@ -25,6 +25,59 @@ function focusWindow(win) {
   }
 }
 
+const HASH_RE = /^[a-f0-9]{64}$/;
+
+// Rewrite ![alt](hash) and [text](hash) inside rendered preview so they
+// open/focus the doc instead of trying to load as image / navigate away.
+function rewriteDocLinks(root) {
+  root.querySelectorAll('img').forEach(img => {
+    const src = img.getAttribute('src') || '';
+    if (!HASH_RE.test(src)) return;
+    const a = document.createElement('a');
+    a.className = 'doc-link';
+    a.dataset.hash = src;
+    a.href = '#';
+    a.textContent = img.getAttribute('alt') || src.slice(0, 8) + '…';
+    img.replaceWith(a);
+  });
+  root.querySelectorAll('a').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    if (!HASH_RE.test(href)) return;
+    a.dataset.hash = href;
+    a.classList.add('doc-link');
+    a.setAttribute('href', '#');
+  });
+}
+
+async function openByHash(hash) {
+  if (docs[hash]) { focusWindow(docs[hash].win); return; }
+  for (const k of Object.keys(docs)) {
+    if (k.endsWith('/' + hash)) { focusWindow(docs[k].win); return; }
+  }
+
+  // Try as own doc first
+  const own = await _supabase.from('documents')
+    .select('content, visibility, title, tags')
+    .eq('user_id', currentUser.id).eq('filename', hash).maybeSingle();
+  if (own.error) { print(`Error: ${own.error.message}`, 'error'); return; }
+  if (own.data) {
+    openDocument(hash, own.data.content, own.data.visibility, own.data.title || '', 'preview', false, own.data.tags || []);
+    print(`Opened: ${own.data.title || hash.slice(0, 8) + '…'}`, 'success');
+    return;
+  }
+
+  // Fall back to public foreign doc
+  const foreign = await _supabase.from('documents')
+    .select('content, visibility, title, tags, author_name')
+    .eq('filename', hash).eq('visibility', 'public').maybeSingle();
+  if (foreign.error) { print(`Error: ${foreign.error.message}`, 'error'); return; }
+  if (!foreign.data) { print(`Error: document ${hash.slice(0, 8)}… not found.`, 'error'); return; }
+
+  const key = `${foreign.data.author_name || 'unknown'}/${hash}`;
+  openDocument(key, foreign.data.content, foreign.data.visibility, foreign.data.title || '', 'preview', true, foreign.data.tags || []);
+  print(`Opened: ${foreign.data.title || key} (read-only)`, 'success');
+}
+
 function updateHint() {
   let hint = document.getElementById('desktop-hint');
   if (Object.keys(docs).length === 0) {
@@ -238,6 +291,13 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   const preview = document.createElement('div');
   preview.className = 'doc-preview';
 
+  preview.addEventListener('click', e => {
+    const a = e.target.closest('a.doc-link');
+    if (!a) return;
+    e.preventDefault();
+    openByHash(a.dataset.hash);
+  });
+
   content.appendChild(editor);
   content.appendChild(preview);
 
@@ -273,6 +333,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   function switchToPreview() {
     mode = 'preview';
     preview.innerHTML = marked.parse(editor.value || '*No content yet.*');
+    rewriteDocLinks(preview);
     editor.style.display = 'none';
     preview.classList.add('visible');
     btnPreview.classList.add('active');
