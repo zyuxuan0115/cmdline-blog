@@ -71,7 +71,7 @@ async function openByHash(hash) {
     .select('content, visibility, title, tags, author_name')
     .eq('filename', hash).eq('visibility', 'public').maybeSingle();
   if (foreign.error) { print(`Error: ${foreign.error.message}`, 'error'); return; }
-  if (!foreign.data) { print(`Error: document ${hash.slice(0, 8)}… not found.`, 'error'); return; }
+  if (!foreign.data) { print(`Error: cannot view document ${hash.slice(0, 8)}… — it is private to another user, or does not exist.`, 'error'); return; }
 
   const key = `${foreign.data.author_name || 'unknown'}/${hash}`;
   openDocument(key, foreign.data.content, foreign.data.visibility, foreign.data.title || '', 'preview', true, foreign.data.tags || []);
