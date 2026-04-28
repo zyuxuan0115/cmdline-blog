@@ -89,7 +89,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
 
   const titleEl = document.createElement('span');
   titleEl.className = 'doc-title';
-  titleEl.textContent = name;
+  titleEl.textContent = initialTitle || '<untitled>';
 
   const tabGroup = document.createElement('div');
   tabGroup.className = 'doc-tab-group';
@@ -121,12 +121,16 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   if (!readOnly) {
     let titleSaveTimer;
     titleInput.addEventListener('input', () => {
+      titleEl.textContent = titleInput.value || '<untitled>';
       clearTimeout(titleSaveTimer);
       titleSaveTimer = setTimeout(() => {
+        const newTitle = titleInput.value;
         _supabase.from('documents')
-          .update({ title: titleInput.value })
+          .update({ title: newTitle })
           .eq('user_id', currentUser.id).eq('filename', name)
-          .then(() => {});
+          .then(() => {
+            updateListSidebarDoc(name, { title: newTitle });
+          });
       }, 800);
     });
   }

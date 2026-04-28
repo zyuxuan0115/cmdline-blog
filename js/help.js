@@ -183,11 +183,11 @@ async function openListSidebar(filter) {
   print('File list opened on the right.', 'muted');
 }
 
-function refreshListSidebarTags(filename, newTags) {
-  // Update cached array so subsequent reads (e.g. open) see fresh tags
+function updateListSidebarDoc(filename, patch) {
+  // Update cached array so subsequent reads (e.g. open) see fresh data
   for (const doc of lastListedDocs) {
     if (doc.user_id === currentUser.id && doc.filename === filename) {
-      doc.tags = newTags;
+      Object.assign(doc, patch);
       break;
     }
   }

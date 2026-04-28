@@ -23,7 +23,7 @@ async function addFileTag(filename, tag) {
   const newTags = [...tags, tag];
   await _supabase.from('documents').update({ tags: newTags }).eq('user_id', currentUser.id).eq('filename', filename);
   if (docs[filename]) docs[filename].win._refreshTagBar();
-  refreshListSidebarTags(filename, newTags);
+  updateListSidebarDoc(filename, { tags: newTags });
   return true;
 }
 
@@ -33,7 +33,7 @@ async function removeFileTag(filename, tag) {
   const newTags = tags.filter(t => t !== tag);
   await _supabase.from('documents').update({ tags: newTags }).eq('user_id', currentUser.id).eq('filename', filename);
   if (docs[filename]) docs[filename].win._refreshTagBar();
-  refreshListSidebarTags(filename, newTags);
+  updateListSidebarDoc(filename, { tags: newTags });
   return true;
 }
 
