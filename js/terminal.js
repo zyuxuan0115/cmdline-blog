@@ -107,6 +107,22 @@ const COMMANDS = {
     await openListSidebar(args.trim());
   },
 
+  hash(args) {
+    if (!requireLogin()) return;
+    const arg = args.trim();
+    if (!/^\d+$/.test(arg)) { print('Usage: hash <index>', 'error'); return; }
+    if (currentSidebarView !== 'list') {
+      print('Error: list sidebar is not open. Run  list  first.', 'error');
+      return;
+    }
+    const idx = parseInt(arg, 10);
+    if (idx < 1 || idx > lastListedDocs.length) {
+      print(`Error: index ${idx} not in last list.`, 'error');
+      return;
+    }
+    print(lastListedDocs[idx - 1].filename, 'info');
+  },
+
   async tag(args) {
     if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);

@@ -12,6 +12,7 @@ const HELP_SECTIONS = [
       ['list public',                    'all public docs'],
       ['list mywork',                    'all your docs'],
       ['list private',                   'your private docs only'],
+      ['hash &lt;index&gt;',                'print the hash of a document'],
     ]
   },
   {

@@ -265,6 +265,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     btnPreview.classList.remove('active');
     uploadLabel.style.display = '';
     visBtn.style.display = '';
+    titleInput.readOnly = false;
     win.classList.remove('preview-mode');
     editor.focus();
   }
@@ -278,6 +279,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     btnEdit.classList.remove('active');
     uploadLabel.style.display = 'none';
     visBtn.style.display = 'none';
+    titleInput.readOnly = true;
     win.classList.add('preview-mode');
   }
 
