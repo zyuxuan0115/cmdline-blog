@@ -15,8 +15,7 @@ async function authRegister(args) {
       print(`Registering ${username}…`, 'muted');
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       await cred.user.updateProfile({ displayName: username });
-      await cred.user.sendEmailVerification();
-      print(`Registered! Check your email (${email}) to confirm your account.`, 'success');
+      print(`Registered as ${username}! You can now log in with:  login ${email} <password>`, 'success');
     } catch (e) {
       print(`Error: ${e.message}`, 'error');
     }
