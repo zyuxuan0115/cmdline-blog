@@ -8,11 +8,11 @@ async function authRegister(args) {
   pendingAction = async (code) => {
     if (!code.trim()) { print('Registration cancelled.', 'muted'); return; }
     const trimmedCode = code.trim();
-    // Validate invitation code against Firestore (code is the document id)
-    const codeSnap = await _db.collection('invitation_codes').doc(trimmedCode).get();
-    if (!codeSnap.exists) { print('Error: invalid invitation code.', 'error'); return; }
-    print(`Registering ${username}…`, 'muted');
     try {
+      // Validate invitation code against Firestore (code is the document id)
+      const codeSnap = await _db.collection('invitation_codes').doc(trimmedCode).get();
+      if (!codeSnap.exists) { print('Error: invalid invitation code.', 'error'); return; }
+      print(`Registering ${username}…`, 'muted');
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       await cred.user.updateProfile({ displayName: username });
       await cred.user.sendEmailVerification();
