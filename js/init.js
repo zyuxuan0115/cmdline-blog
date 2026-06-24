@@ -12,11 +12,17 @@ if (girlBubble) {
 }
 
 // Restore existing session on page load
-_supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session) {
-    currentUser = session.user;
-    const username = session.user.user_metadata?.username || session.user.email;
+let _sessionRestored = false;
+_auth.onAuthStateChanged((user) => {
+  currentUser = user;
+  if (user) {
+    const username = user.displayName || user.email;
     updatePrompt(username);
-    print(`Restored session: ${username}`, 'muted');
+    if (!_sessionRestored) {
+      print(`Restored session: ${username}`, 'muted');
+      _sessionRestored = true;
+    }
+  } else {
+    updatePrompt(null);
   }
 });

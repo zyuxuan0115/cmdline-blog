@@ -153,7 +153,8 @@
 
     .error { color: #ff6b6b; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 </head>
 <body>
   <canvas id="space-bg"></canvas>
@@ -189,10 +190,19 @@
   </div>
 
   <script>
-    const _supabase = supabase.createClient(
-      'https://emjhatsnkpvnszueetoi.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtamhhdHNua3B2bnN6dWVldG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjQ5MzMsImV4cCI6MjA4OTMwMDkzM30.P2V9k6GNHwl3s01USbL4U11PIMjYR2A_OjGnral7qY8'
-    );
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxos4vkR1hDYyiBZ5W1qtpM4Z48bKDyh8",
+      authDomain: "cmdline-blog.firebaseapp.com",
+      projectId: "cmdline-blog",
+      storageBucket: "cmdline-blog.firebasestorage.app",
+      messagingSenderId: "785251107809",
+      appId: "1:785251107809:web:d5d10194c7b0538a1688a0",
+      measurementId: "G-3XTR15LEPT"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const _functions = firebase.functions();
+    // Must match ADMIN_KEY in functions/index.js.
+    const ADMIN_KEY = 'change-me-please';
 
     if (sessionStorage.getItem('admin_ok') !== '1') {
       window.location.replace('index.html');
@@ -236,15 +246,17 @@
       statusEl.classList.remove('error');
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Loading…</td></tr>';
 
-      const { data, error } = await _supabase.rpc('admin_list_user_documents', { p_user_id: userId });
-      if (error) {
+      let rows;
+      try {
+        const res = await _functions.httpsCallable('adminListUserDocuments')({ adminKey: ADMIN_KEY, userId });
+        rows = res.data || [];
+      } catch (error) {
         tbody.innerHTML = '';
         statusEl.classList.add('error');
         statusEl.textContent = `Error: ${error.message}`;
         return;
       }
 
-      const rows = data || [];
       if (rows.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">No documents.</td></tr>';
         return;
@@ -273,8 +285,9 @@
 
       btn.disabled = true;
       btn.textContent = 'Deleting…';
-      const { error } = await _supabase.rpc('admin_delete_document', { p_user_id: userId, p_filename: filename });
-      if (error) {
+      try {
+        await _functions.httpsCallable('adminDeleteDocument')({ adminKey: ADMIN_KEY, userId, filename });
+      } catch (error) {
         btn.disabled = false;
         btn.textContent = 'Delete';
         statusEl.classList.add('error');

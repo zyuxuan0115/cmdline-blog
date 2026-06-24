@@ -55,6 +55,7 @@ const helpContent = document.getElementById('help-sidebar-content');
 const sidebarTitle = document.getElementById('help-sidebar-title');
 let currentSidebarView = null; // 'help' or 'list'
 let lastListedDocs = []; // docs from the most recent  list  command, in display order
+let lastListFilter = ''; // '', 'public', 'mywork', or 'private'
 
 function buildHelpHTML() {
   return HELP_SECTIONS.map(section => `
@@ -128,37 +129,46 @@ function closeHelpSidebar() {
 }
 
 async function openListSidebar(filter) {
+  lastListFilter = filter;
   const fields = 'filename, title, visibility, tags, updated_at, author_name, user_id';
   let html = '';
   let title = 'All Documents';
 
+  // Firestore returns full document data; `fields` is unused but kept for clarity.
+  const col = _db.collection('documents');
+  const toData = snap => snap.docs.map(d => d.data());
+
   if (filter === 'public') {
     // All public posts from everyone
-    const { data, error } = await _supabase.from('documents').select(fields).eq('visibility', 'public').order('updated_at', { ascending: false });
-    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    let data;
+    try { data = toData(await col.where('visibility', '==', 'public').orderBy('updated_at', 'desc').get()); }
+    catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     title = 'Public Documents';
     lastListedDocs = data || [];
     html = buildListHTML(lastListedDocs, title, false);
   } else if (filter === 'mywork') {
     // All of current user's posts (public + private)
-    const { data, error } = await _supabase.from('documents').select(fields).eq('user_id', currentUser.id).order('updated_at', { ascending: false });
-    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    let data;
+    try { data = toData(await col.where('user_id', '==', currentUser.uid).orderBy('updated_at', 'desc').get()); }
+    catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     title = 'My Documents';
     lastListedDocs = data || [];
     html = buildListHTML(lastListedDocs, title, true);
   } else if (filter === 'private') {
     // Current user's private posts only
-    const { data, error } = await _supabase.from('documents').select(fields).eq('user_id', currentUser.id).eq('visibility', 'private').order('updated_at', { ascending: false });
-    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    let data;
+    try { data = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'private').orderBy('updated_at', 'desc').get()); }
+    catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     title = 'Private Documents';
     lastListedDocs = data || [];
     html = buildListHTML(lastListedDocs, title, true);
   } else {
     // Default: all public + current user's private, sorted newest first
-    const { data: myPrivate, error: myErr } = await _supabase.from('documents').select(fields).eq('user_id', currentUser.id).eq('visibility', 'private').order('updated_at', { ascending: false });
-    if (myErr) { print(`Error: ${myErr.message}`, 'error'); return; }
-    const { data: allPublic, error: pubErr } = await _supabase.from('documents').select(fields).eq('visibility', 'public').order('updated_at', { ascending: false });
-    if (pubErr) { print(`Error: ${pubErr.message}`, 'error'); return; }
+    let myPrivate, allPublic;
+    try {
+      myPrivate = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'private').orderBy('updated_at', 'desc').get());
+      allPublic = toData(await col.where('visibility', '==', 'public').orderBy('updated_at', 'desc').get());
+    } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     // Merge and sort by updated_at descending
     const all = [...myPrivate, ...allPublic].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
     title = 'All Documents';
@@ -174,7 +184,7 @@ async function openListSidebar(filter) {
       html = `
         <div class="help-section">
           <div class="help-section-title">${title} (${all.length})</div>
-          ${all.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.id, i + 1)).join('')}
+          ${all.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.uid, i + 1)).join('')}
         </div>
       `;
     }
@@ -184,23 +194,34 @@ async function openListSidebar(filter) {
   print('File list opened on the right.', 'muted');
 }
 
-function updateListSidebarDoc(filename, patch) {
-  // Update cached array so subsequent reads (e.g. open) see fresh data
-  for (const doc of lastListedDocs) {
-    if (doc.user_id === currentUser.id && doc.filename === filename) {
-      Object.assign(doc, patch);
-      break;
-    }
-  }
-  // Live re-render only when the list view is the one showing
+function renderListSidebar() {
   if (currentSidebarView !== 'list') return;
   const sectionTitle = sidebarTitle.textContent;
   helpContent.innerHTML = lastListedDocs.length === 0
     ? `<div class="help-section"><div class="help-section-title">${sectionTitle}</div><div class="help-entry"><span>No documents found.</span></div></div>`
     : `<div class="help-section">
-         <div class="help-section-title">${sectionTitle}</div>
-         ${lastListedDocs.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.id, i + 1)).join('')}
+         <div class="help-section-title">${sectionTitle} (${lastListedDocs.length})</div>
+         ${lastListedDocs.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.uid, i + 1)).join('')}
        </div>`;
+}
+
+function updateListSidebarDoc(filename, patch) {
+  for (const doc of lastListedDocs) {
+    if (doc.user_id === currentUser.uid && doc.filename === filename) {
+      Object.assign(doc, patch);
+      break;
+    }
+  }
+  renderListSidebar();
+}
+
+function addDocToListSidebar(doc) {
+  // Filter compatibility for own newly-created docs
+  if (lastListFilter === 'public'  && doc.visibility !== 'public')  return;
+  if (lastListFilter === 'private' && doc.visibility !== 'private') return;
+  // 'mywork' and default ('') always include the user's own doc
+  lastListedDocs.unshift(doc);
+  renderListSidebar();
 }
 
 document.getElementById('help-sidebar-close').addEventListener('click', closeHelpSidebar);

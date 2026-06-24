@@ -1,27 +1,30 @@
-// ─── Supabase Document Helpers ────────────────────────────────────────────────
+// ─── Firestore Document Helpers ───────────────────────────────────────────────
+// Documents are keyed by their `filename` (a 256-bit random hex id), so the
+// filename doubles as the Firestore document id. We still store `user_id` on
+// each doc for ownership checks and queries.
 
 async function dbFileExists(name) {
-  const { data } = await _supabase.from('documents').select('filename').eq('user_id', currentUser.id).eq('filename', name).maybeSingle();
-  return !!data;
+  const snap = await _db.collection('documents').doc(name).get();
+  return snap.exists && snap.data().user_id === currentUser.uid;
 }
 
 async function dbSetVisibility(name, vis) {
-  await _supabase.from('documents').update({ visibility: vis }).eq('user_id', currentUser.id).eq('filename', name);
+  await _db.collection('documents').doc(name).update({ visibility: vis });
   if (docs[name]) { docs[name].visibility = vis; docs[name].win._refreshVisBtn(); }
 }
 
-// ─── Tag Helpers (Supabase) ───────────────────────────────────────────────────
+// ─── Tag Helpers (Firestore) ──────────────────────────────────────────────────
 
 async function getTags(filename) {
-  const { data } = await _supabase.from('documents').select('tags').eq('user_id', currentUser.id).eq('filename', filename).maybeSingle();
-  return data?.tags || [];
+  const snap = await _db.collection('documents').doc(filename).get();
+  return (snap.exists && snap.data().tags) || [];
 }
 
 async function addFileTag(filename, tag) {
   const tags = await getTags(filename);
   if (tags.includes(tag)) return false;
   const newTags = [...tags, tag];
-  await _supabase.from('documents').update({ tags: newTags }).eq('user_id', currentUser.id).eq('filename', filename);
+  await _db.collection('documents').doc(filename).update({ tags: newTags });
   if (docs[filename]) docs[filename].win._refreshTagBar();
   updateListSidebarDoc(filename, { tags: newTags });
   return true;
@@ -31,20 +34,25 @@ async function removeFileTag(filename, tag) {
   const tags = await getTags(filename);
   if (!tags.includes(tag)) return false;
   const newTags = tags.filter(t => t !== tag);
-  await _supabase.from('documents').update({ tags: newTags }).eq('user_id', currentUser.id).eq('filename', filename);
+  await _db.collection('documents').doc(filename).update({ tags: newTags });
   if (docs[filename]) docs[filename].win._refreshTagBar();
   updateListSidebarDoc(filename, { tags: newTags });
   return true;
 }
 
 async function getFilesWithTag(tag) {
-  const { data } = await _supabase.from('documents').select('filename').eq('user_id', currentUser.id).contains('tags', [tag]);
-  return (data || []).map(d => d.filename).sort();
+  const snap = await _db.collection('documents')
+    .where('user_id', '==', currentUser.uid)
+    .where('tags', 'array-contains', tag)
+    .get();
+  return snap.docs.map(d => d.data().filename).sort();
 }
 
 async function getAllTags() {
-  const { data } = await _supabase.from('documents').select('tags').eq('user_id', currentUser.id);
+  const snap = await _db.collection('documents')
+    .where('user_id', '==', currentUser.uid)
+    .get();
   const tagSet = new Set();
-  (data || []).forEach(d => (d.tags || []).forEach(t => tagSet.add(t)));
+  snap.docs.forEach(d => (d.data().tags || []).forEach(t => tagSet.add(t)));
   return [...tagSet].sort();
 }

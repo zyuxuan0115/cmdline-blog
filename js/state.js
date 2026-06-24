@@ -1,9 +1,19 @@
-// ─── Supabase ─────────────────────────────────────────────────────────────────
+// ─── Firebase ─────────────────────────────────────────────────────────────────
 
-const _supabase = supabase.createClient(
-  'https://emjhatsnkpvnszueetoi.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtamhhdHNua3B2bnN6dWVldG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjQ5MzMsImV4cCI6MjA4OTMwMDkzM30.P2V9k6GNHwl3s01USbL4U11PIMjYR2A_OjGnral7qY8'
-);
+const firebaseConfig = {
+  apiKey: "AIzaSyDxos4vkR1hDYyiBZ5W1qtpM4Z48bKDyh8",
+  authDomain: "cmdline-blog.firebaseapp.com",
+  projectId: "cmdline-blog",
+  storageBucket: "cmdline-blog.firebasestorage.app",
+  messagingSenderId: "785251107809",
+  appId: "1:785251107809:web:d5d10194c7b0538a1688a0",
+  measurementId: "G-3XTR15LEPT"
+};
+
+firebase.initializeApp(firebaseConfig);
+const _auth = firebase.auth();
+const _db = firebase.firestore();
+const _functions = firebase.functions();
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -11,7 +21,7 @@ const docs = {};           // filename → { content, win }
 let cmdHistory = [];
 let historyIndex = -1;
 let zCounter = 100;
-let currentUser = null;   // currently logged-in Supabase user
+let currentUser = null;   // currently logged-in Firebase user
 let pendingAction = null; // callback for confirmation prompts (e.g. unregister)
 
 // ─── Shared DOM refs ─────────────────────────────────────────────────────────

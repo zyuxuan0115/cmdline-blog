@@ -30,10 +30,21 @@ const COMMANDS = {
     crypto.getRandomValues(bytes);
     const filename = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    const authorName = currentUser.user_metadata?.username || currentUser.email;
-    const { error } = await _supabase.from('documents').insert({ user_id: currentUser.id, filename, content: '', visibility: vis, title, author_name: authorName });
-    if (error) { print(`Error: ${error.message}`, 'error'); return; }
+    const authorName = currentUser.displayName || currentUser.email;
+    const nowIso = new Date().toISOString();
+    try {
+      await _db.collection('documents').doc(filename).set({
+        user_id: currentUser.uid, filename, content: '', visibility: vis, title,
+        author_name: authorName, updated_at: nowIso, created_at: nowIso,
+      });
+    } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     openDocument(filename, '', vis, title, 'edit');
+    addDocToListSidebar({
+      filename, title, visibility: vis, tags: [],
+      updated_at: nowIso,
+      author_name: authorName,
+      user_id: currentUser.uid,
+    });
     const label = title || `${filename.slice(0, 8)}…`;
     print(`Created document: ${label} [${vis}]`, 'success');
   },
@@ -54,18 +65,21 @@ const COMMANDS = {
       return;
     }
     const entry = lastListedDocs[idx - 1];
-    const isMine = entry.user_id === currentUser.id;
+    const isMine = entry.user_id === currentUser.uid;
     const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
     if (docs[key]) {
       focusWindow(docs[key].win);
       print(`Focused: ${key}`, 'success');
       return;
     }
-    let q = _supabase.from('documents').select('content, visibility, title, tags').eq('filename', entry.filename).eq('user_id', entry.user_id);
-    if (!isMine) q = q.eq('visibility', 'public');
-    const { data, error } = await q.maybeSingle();
-    if (error) { print(`Error: ${error.message}`, 'error'); return; }
-    if (!data) { print(`Error: document not found.`, 'error'); return; }
+    let data;
+    try {
+      const snap = await _db.collection('documents').doc(entry.filename).get();
+      data = snap.exists ? snap.data() : null;
+    } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
+    if (!data || data.user_id !== entry.user_id || (!isMine && data.visibility !== 'public')) {
+      print(`Error: document not found.`, 'error'); return;
+    }
     openDocument(key, data.content, data.visibility, data.title || '', 'preview', !isMine, data.tags || []);
     print(`Opened: ${key}${isMine ? '' : ' (read-only)'}`, 'success');
   },
@@ -95,7 +109,7 @@ const COMMANDS = {
       return;
     }
     const entry = lastListedDocs[idx - 1];
-    const isMine = entry.user_id === currentUser.id;
+    const isMine = entry.user_id === currentUser.uid;
     const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
     if (!docs[key]) { print(`"${key}" is not open.`, 'error'); return; }
     closeDocument(key);

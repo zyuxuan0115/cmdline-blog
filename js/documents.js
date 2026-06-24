@@ -55,27 +55,28 @@ async function openByHash(hash) {
     if (k.endsWith('/' + hash)) { focusWindow(docs[k].win); return; }
   }
 
-  // Try as own doc first
-  const own = await _supabase.from('documents')
-    .select('content, visibility, title, tags')
-    .eq('user_id', currentUser.id).eq('filename', hash).maybeSingle();
-  if (own.error) { print(`Error: ${own.error.message}`, 'error'); return; }
-  if (own.data) {
-    openDocument(hash, own.data.content, own.data.visibility, own.data.title || '', 'preview', false, own.data.tags || []);
-    print(`Opened: ${own.data.title || hash.slice(0, 8) + '…'}`, 'success');
+  let snap;
+  try {
+    snap = await _db.collection('documents').doc(hash).get();
+  } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
+  const d = snap.exists ? snap.data() : null;
+
+  // Own doc
+  if (d && d.user_id === currentUser.uid) {
+    openDocument(hash, d.content, d.visibility, d.title || '', 'preview', false, d.tags || []);
+    print(`Opened: ${d.title || hash.slice(0, 8) + '…'}`, 'success');
     return;
   }
 
-  // Fall back to public foreign doc
-  const foreign = await _supabase.from('documents')
-    .select('content, visibility, title, tags, author_name')
-    .eq('filename', hash).eq('visibility', 'public').maybeSingle();
-  if (foreign.error) { print(`Error: ${foreign.error.message}`, 'error'); return; }
-  if (!foreign.data) { print(`Error: cannot view document ${hash.slice(0, 8)}… — it is private to another user, or does not exist.`, 'error'); return; }
+  // Public foreign doc (read-only)
+  if (d && d.visibility === 'public') {
+    const key = `${d.author_name || 'unknown'}/${hash}`;
+    openDocument(key, d.content, d.visibility, d.title || '', 'preview', true, d.tags || []);
+    print(`Opened: ${d.title || key} (read-only)`, 'success');
+    return;
+  }
 
-  const key = `${foreign.data.author_name || 'unknown'}/${hash}`;
-  openDocument(key, foreign.data.content, foreign.data.visibility, foreign.data.title || '', 'preview', true, foreign.data.tags || []);
-  print(`Opened: ${foreign.data.title || key} (read-only)`, 'success');
+  print(`Error: cannot view document ${hash.slice(0, 8)}… — it is private to another user, or does not exist.`, 'error');
 }
 
 function updateHint() {
@@ -178,9 +179,8 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
       clearTimeout(titleSaveTimer);
       titleSaveTimer = setTimeout(() => {
         const newTitle = titleInput.value;
-        _supabase.from('documents')
+        _db.collection('documents').doc(name)
           .update({ title: newTitle })
-          .eq('user_id', currentUser.id).eq('filename', name)
           .then(() => {
             updateListSidebarDoc(name, { title: newTitle });
           });
@@ -356,12 +356,10 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
         savedIndicator.textContent = 'saving…';
-        _supabase.from('documents')
+        _db.collection('documents').doc(name)
           .update({ content: editor.value, updated_at: new Date().toISOString() })
-          .eq('user_id', currentUser.id).eq('filename', name)
-          .then(({ error }) => {
-            savedIndicator.textContent = error ? 'save failed ✗' : 'saved ✓';
-          });
+          .then(() => { savedIndicator.textContent = 'saved ✓'; })
+          .catch(() => { savedIndicator.textContent = 'save failed ✗'; });
       }, 800);
     });
   }
