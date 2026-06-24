@@ -1,20 +1,3 @@
-// ─── Firebase ─────────────────────────────────────────────────────────────────
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDxos4vkR1hDYyiBZ5W1qtpM4Z48bKDyh8",
-  authDomain: "cmdline-blog.firebaseapp.com",
-  projectId: "cmdline-blog",
-  storageBucket: "cmdline-blog.firebasestorage.app",
-  messagingSenderId: "785251107809",
-  appId: "1:785251107809:web:d5d10194c7b0538a1688a0",
-  measurementId: "G-3XTR15LEPT"
-};
-
-firebase.initializeApp(firebaseConfig);
-const _auth = firebase.auth();
-const _db = firebase.firestore();
-const _functions = firebase.functions();
-
 // ─── State ───────────────────────────────────────────────────────────────────
 
 const docs = {};           // filename → { content, win }
@@ -48,4 +31,32 @@ function print(text, cls = 'info') {
 
 function updatePrompt(email) {
   promptEl.textContent = email ? `${email} $ ` : '$ ';
+}
+
+// ─── Firebase ─────────────────────────────────────────────────────────────────
+// Initialised after the terminal essentials above, and guarded, so that a
+// Firebase/CDN failure can't take the whole terminal down — it surfaces as a
+// visible error instead of a dead input box.
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDxos4vkR1hDYyiBZ5W1qtpM4Z48bKDyh8",
+  authDomain: "cmdline-blog.firebaseapp.com",
+  projectId: "cmdline-blog",
+  storageBucket: "cmdline-blog.firebasestorage.app",
+  messagingSenderId: "785251107809",
+  appId: "1:785251107809:web:d5d10194c7b0538a1688a0",
+  measurementId: "G-3XTR15LEPT"
+};
+
+let _auth, _db, _functions;
+try {
+  if (typeof firebase === 'undefined') {
+    throw new Error('Firebase SDK failed to load (check your network / script tags).');
+  }
+  firebase.initializeApp(firebaseConfig);
+  _auth = firebase.auth();
+  _db = firebase.firestore();
+  _functions = firebase.functions();
+} catch (e) {
+  print(`Firebase init failed: ${e.message}`, 'error');
 }

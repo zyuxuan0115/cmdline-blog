@@ -13,7 +13,7 @@ if (girlBubble) {
 
 // Restore existing session on page load
 let _sessionRestored = false;
-_auth.onAuthStateChanged((user) => {
+if (_auth) _auth.onAuthStateChanged((user) => {
   currentUser = user;
   if (user) {
     const username = user.displayName || user.email;
