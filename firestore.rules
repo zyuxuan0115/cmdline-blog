@@ -5,7 +5,7 @@ service cloud.firestore {
     // Replace with the UID of your admin's Firebase Auth account.
     // Must match ADMIN_UID in admin/index.html, dashboard.html, user-documents.html.
     function isAdmin() {
-      return request.auth != null && request.auth.uid == 'REPLACE_WITH_ADMIN_UID';
+      return request.auth != null && request.auth.uid == 'BqXArSXr1pWbYkAo5FTCzDPFESH2';
     }
 
     // Documents are keyed by their filename (a 256-bit random hex id).
