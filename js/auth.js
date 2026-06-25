@@ -67,6 +67,10 @@ async function authLogout() {
     updatePrompt(null);
     // Close any open document windows belonging to the previous session.
     Object.keys(docs).forEach(closeDocument);
+    // Close the sidebar (command help / file list) too.
+    closeHelpSidebar();
+    // Clear the terminal history from the previous session.
+    output.innerHTML = '';
     print('Logged out.', 'success');
   } catch (e) {
     print(`Error: ${authErrorMessage(e)}`, 'error');
