@@ -33,6 +33,11 @@ async function authRegister(args) {
       print(`Registering ${username}…`, 'muted');
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       await cred.user.updateProfile({ displayName: username });
+      // Mirror the account into a `users` collection so the admin dashboard can
+      // list registered users (Firebase Auth's user list isn't readable client-side).
+      await _db.collection('users').doc(cred.user.uid).set({
+        uid: cred.user.uid, email, username, created_at: new Date().toISOString(),
+      });
       // createUserWithEmailAndPassword auto-signs in, but onAuthStateChanged fired
       // before displayName was set — refresh currentUser and the prompt manually.
       currentUser = cred.user;
@@ -103,11 +108,10 @@ function authUnregister() {
       const uid = currentUser.uid;
       // Delete all of the user's own documents (rules permit owners to delete).
       const snap = await _db.collection('documents').where('user_id', '==', uid).get();
-      if (!snap.empty) {
-        const batch = _db.batch();
-        snap.docs.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
+      const batch = _db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      batch.delete(_db.collection('users').doc(uid)); // remove the profile mirror too
+      await batch.commit();
       // Delete the auth account itself (allowed for one's own, freshly-reauthed account).
       await currentUser.delete();
       currentUser = null;

@@ -154,7 +154,8 @@
     .error { color: #ff6b6b; }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <canvas id="space-bg"></canvas>
@@ -200,13 +201,18 @@
       measurementId: "G-3XTR15LEPT"
     };
     firebase.initializeApp(firebaseConfig);
-    const _functions = firebase.functions();
-    // Must match ADMIN_KEY in functions/index.js.
-    const ADMIN_KEY = 'change-me-please';
+    const _auth = firebase.auth();
+    const _db = firebase.firestore();
+    // Must match ADMIN_UID in the Firestore security rules and admin/index.html.
+    const ADMIN_UID = 'REPLACE_WITH_ADMIN_UID';
 
-    if (sessionStorage.getItem('admin_ok') !== '1') {
-      window.location.replace('index.html');
-    }
+    // Gate: the visitor must be signed in as the admin account.
+    _auth.onAuthStateChanged((user) => {
+      if (!user || user.uid !== ADMIN_UID) {
+        sessionStorage.removeItem('admin_ok');
+        window.location.replace('index.html');
+      }
+    });
 
     const params = new URLSearchParams(window.location.search);
     const userId   = params.get('user_id');
@@ -248,12 +254,13 @@
 
       let rows;
       try {
-        const res = await _functions.httpsCallable('adminListUserDocuments')({ adminKey: ADMIN_KEY, userId });
-        rows = res.data || [];
+        const snap = await _db.collection('documents').where('user_id', '==', userId).get();
+        rows = snap.docs.map(d => d.data())
+          .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
       } catch (error) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Unavailable</td></tr>';
         statusEl.classList.add('error');
-        statusEl.textContent = 'Viewing another user’s documents requires Cloud Functions (Blaze plan), which are not deployed on this project.';
+        statusEl.textContent = `Error loading documents: ${error.message}`;
         return;
       }
 
@@ -286,12 +293,12 @@
       btn.disabled = true;
       btn.textContent = 'Deleting…';
       try {
-        await _functions.httpsCallable('adminDeleteDocument')({ adminKey: ADMIN_KEY, userId, filename });
+        await _db.collection('documents').doc(filename).delete();
       } catch (error) {
         btn.disabled = false;
         btn.textContent = 'Delete';
         statusEl.classList.add('error');
-        statusEl.textContent = `Cannot delete ${label}: deleting another user’s document requires Cloud Functions (Blaze plan).`;
+        statusEl.textContent = `Error deleting ${label}: ${error.message}`;
         return;
       }
       statusEl.classList.remove('error');

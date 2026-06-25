@@ -130,6 +130,8 @@
     }
 
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
   <canvas id="space-bg"></canvas>
@@ -137,8 +139,8 @@
     <h1>Admin Login</h1>
     <form id="login-form">
       <div class="field">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+        <label for="username">Email</label>
+        <input type="email" id="username" name="username" autocomplete="username" required autofocus>
       </div>
       <div class="field">
         <label for="password">Password</label>
@@ -254,27 +256,46 @@
       requestAnimationFrame(draw);
     })();
 
-    // Login form handler
-    document.getElementById('login-form').addEventListener('submit', function (e) {
+    // ─── Firebase admin login ──────────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxos4vkR1hDYyiBZ5W1qtpM4Z48bKDyh8",
+      authDomain: "cmdline-blog.firebaseapp.com",
+      projectId: "cmdline-blog",
+      storageBucket: "cmdline-blog.firebasestorage.app",
+      messagingSenderId: "785251107809",
+      appId: "1:785251107809:web:d5d10194c7b0538a1688a0",
+      measurementId: "G-3XTR15LEPT"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const _auth = firebase.auth();
+    // The UID of the admin's Firebase Auth account. MUST match ADMIN_UID in the
+    // Firestore security rules. Replace the placeholder below.
+    const ADMIN_UID = 'REPLACE_WITH_ADMIN_UID';
+
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
       e.preventDefault();
-      const username = document.getElementById('username').value;
+      const email = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       const errorMsg = document.getElementById('error-msg');
-
       errorMsg.textContent = '';
 
-      if (!username || !password) {
+      if (!email || !password) {
         errorMsg.textContent = 'Please fill in all fields.';
         return;
       }
 
-      if (username === 'zyuxuan' && password === '123456') {
+      try {
+        const cred = await _auth.signInWithEmailAndPassword(email, password);
+        if (cred.user.uid !== ADMIN_UID) {
+          await _auth.signOut();
+          errorMsg.textContent = 'This account is not an administrator.';
+          return;
+        }
         sessionStorage.setItem('admin_ok', '1');
         window.location.href = 'dashboard.html';
-        return;
+      } catch (err) {
+        errorMsg.textContent = 'Invalid email or password.';
       }
-
-      errorMsg.textContent = 'Invalid username or password.';
     });
   </script>
 </body>

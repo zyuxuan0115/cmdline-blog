@@ -2,24 +2,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Replace with the UID of your admin's Firebase Auth account.
+    // Must match ADMIN_UID in admin/index.html, dashboard.html, user-documents.html.
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'REPLACE_WITH_ADMIN_UID';
+    }
+
     // Documents are keyed by their filename (a 256-bit random hex id).
     match /documents/{filename} {
-      // Public docs are readable by anyone; private docs only by their owner.
+      // Public docs: anyone. Private docs: the owner. Admin: everything.
       allow read: if resource.data.visibility == 'public'
-                  || (request.auth != null && request.auth.uid == resource.data.user_id);
+                  || (request.auth != null && request.auth.uid == resource.data.user_id)
+                  || isAdmin();
 
       // A user may only create docs they own.
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.user_id;
 
-      // Only the owner may modify or delete (admin deletes go through Cloud Functions).
-      allow update, delete: if request.auth != null
+      // Owners may modify their own docs.
+      allow update: if request.auth != null
                     && request.auth.uid == resource.data.user_id;
+
+      // Owners (or the admin) may delete.
+      allow delete: if (request.auth != null && request.auth.uid == resource.data.user_id)
+                    || isAdmin();
+    }
+
+    // User profile mirror — lets the admin dashboard list registered users
+    // (Firebase Auth's user list is not readable from the client).
+    match /users/{uid} {
+      // Each user reads/writes only their own profile; the admin reads all.
+      allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if (request.auth != null && request.auth.uid == uid) || isAdmin();
     }
 
     // Invitation codes are looked up by id during registration (before sign-in),
     // so a direct get() must be allowed — but listing/enumeration is not.
-    // Manage codes from the Firebase console (or a Cloud Function).
     match /invitation_codes/{code} {
       allow get: if true;
       allow list, write: if false;

@@ -153,7 +153,8 @@
     .pager-buttons { display: flex; gap: 8px; }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <canvas id="space-bg"></canvas>
@@ -204,17 +205,22 @@
       measurementId: "G-3XTR15LEPT"
     };
     firebase.initializeApp(firebaseConfig);
-    const _functions = firebase.functions();
-    // Must match ADMIN_KEY in functions/index.js.
-    const ADMIN_KEY = 'change-me-please';
+    const _auth = firebase.auth();
+    const _db = firebase.firestore();
+    // Must match ADMIN_UID in the Firestore security rules and admin/index.html.
+    const ADMIN_UID = 'REPLACE_WITH_ADMIN_UID';
 
-    // Gate: require the login page to have set this flag.
-    if (sessionStorage.getItem('admin_ok') !== '1') {
-      window.location.replace('index.html');
-    }
+    // Gate: the visitor must be signed in as the admin account.
+    _auth.onAuthStateChanged((user) => {
+      if (!user || user.uid !== ADMIN_UID) {
+        sessionStorage.removeItem('admin_ok');
+        window.location.replace('index.html');
+      }
+    });
 
-    document.getElementById('logout-btn').addEventListener('click', () => {
+    document.getElementById('logout-btn').addEventListener('click', async () => {
       sessionStorage.removeItem('admin_ok');
+      await _auth.signOut();
     });
 
     const PAGE_SIZE = 50;
@@ -247,27 +253,28 @@
       prevBtn.disabled = true;
       nextBtn.disabled = true;
 
-      // Fetch PAGE_SIZE + 1 to detect whether a next page exists.
-      let rows;
+      // The Web SDK has no offset(), so fetch the whole users collection and
+      // paginate client-side. Fine for a blog-sized user base.
+      let all;
       try {
-        const res = await _functions.httpsCallable('adminListUsers')({
-          adminKey: ADMIN_KEY,
-          limit: PAGE_SIZE + 1,
-          offset: page * PAGE_SIZE,
+        const snap = await _db.collection('users').orderBy('created_at', 'desc').get();
+        all = snap.docs.map(d => {
+          const u = d.data();
+          return { id: u.uid || d.id, email: u.email, username: u.username, created_at: u.created_at };
         });
-        rows = res.data || [];
       } catch (error) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Unavailable</td></tr>';
         statusEl.classList.add('error');
-        statusEl.textContent = 'User management requires Cloud Functions (Blaze plan), which are not deployed on this project.';
+        statusEl.textContent = `Error loading users: ${error.message}`;
         prevBtn.disabled = true;
         nextBtn.disabled = true;
         pageInfo.textContent = '—';
         return;
       }
 
-      hasNext = rows.length > PAGE_SIZE;
-      const shown = hasNext ? rows.slice(0, PAGE_SIZE) : rows;
+      const start = page * PAGE_SIZE;
+      hasNext = all.length > start + PAGE_SIZE;
+      const shown = all.slice(start, start + PAGE_SIZE);
 
       if (shown.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">No users.</td></tr>';
@@ -279,7 +286,7 @@
             <td>${escapeHtml(u.email)}</td>
             <td><a class="user-link" href="${userDocsUrl}">${escapeHtml(u.username || '—')}</a></td>
             <td>${escapeHtml(fmtDate(u.created_at))}</td>
-            <td>${u.email_confirmed_at ? 'yes' : 'no'}</td>
+            <td>—</td>
             <td style="text-align:right;">
               <button class="btn btn-danger delete-btn">Delete</button>
             </td>
@@ -301,21 +308,26 @@
       const tr = btn.closest('tr');
       const id = tr.dataset.id;
       const email = tr.dataset.email;
-      if (!confirm(`Delete user "${email}" AND all their documents? This cannot be undone.`)) return;
+      if (!confirm(`Delete all documents and the profile for "${email}"?\n\nNote: their login account itself cannot be removed without a backend (Blaze), so they could still sign in.`)) return;
 
       btn.disabled = true;
       btn.textContent = 'Deleting…';
       try {
-        await _functions.httpsCallable('adminDeleteUser')({ adminKey: ADMIN_KEY, userId: id });
+        // Delete the user's documents + their profile doc (admin rules permit this).
+        const docsSnap = await _db.collection('documents').where('user_id', '==', id).get();
+        const batch = _db.batch();
+        docsSnap.docs.forEach(d => batch.delete(d.ref));
+        batch.delete(_db.collection('users').doc(id));
+        await batch.commit();
       } catch (error) {
         btn.disabled = false;
         btn.textContent = 'Delete';
         statusEl.classList.add('error');
-        statusEl.textContent = `Cannot delete ${email}: user deletion requires Cloud Functions (Blaze plan).`;
+        statusEl.textContent = `Error deleting ${email}: ${error.message}`;
         return;
       }
       statusEl.classList.remove('error');
-      statusEl.textContent = `Deleted ${email}.`;
+      statusEl.textContent = `Deleted documents + profile for ${email}.`;
       loadUsers();
     });
 
