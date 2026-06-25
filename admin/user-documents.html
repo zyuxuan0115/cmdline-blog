@@ -251,9 +251,9 @@
         const res = await _functions.httpsCallable('adminListUserDocuments')({ adminKey: ADMIN_KEY, userId });
         rows = res.data || [];
       } catch (error) {
-        tbody.innerHTML = '';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Unavailable</td></tr>';
         statusEl.classList.add('error');
-        statusEl.textContent = `Error: ${error.message}`;
+        statusEl.textContent = 'Viewing another user’s documents requires Cloud Functions (Blaze plan), which are not deployed on this project.';
         return;
       }
 
@@ -291,7 +291,7 @@
         btn.disabled = false;
         btn.textContent = 'Delete';
         statusEl.classList.add('error');
-        statusEl.textContent = `Error deleting ${label}: ${error.message}`;
+        statusEl.textContent = `Cannot delete ${label}: deleting another user’s document requires Cloud Functions (Blaze plan).`;
         return;
       }
       statusEl.classList.remove('error');

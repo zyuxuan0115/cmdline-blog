@@ -100,11 +100,22 @@ function authUnregister() {
       print(`Error: incorrect password. Unregister cancelled.`, 'error'); return;
     }
     try {
-      // Delete the user's documents + auth account via Cloud Function (Admin SDK)
-      await _functions.httpsCallable('deleteUser')();
-      await _auth.signOut();
+      const uid = currentUser.uid;
+      // Delete all of the user's own documents (rules permit owners to delete).
+      const snap = await _db.collection('documents').where('user_id', '==', uid).get();
+      if (!snap.empty) {
+        const batch = _db.batch();
+        snap.docs.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      // Delete the auth account itself (allowed for one's own, freshly-reauthed account).
+      await currentUser.delete();
       currentUser = null;
       updatePrompt(null);
+      // Tidy up the previous session's UI, like logout does.
+      Object.keys(docs).forEach(closeDocument);
+      closeHelpSidebar();
+      output.innerHTML = '';
       print('Your account has been deleted. Goodbye.', 'success');
     } catch (e) {
       print(`Error: ${authErrorMessage(e)}`, 'error');

@@ -257,10 +257,12 @@
         });
         rows = res.data || [];
       } catch (error) {
-        tbody.innerHTML = '';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Unavailable</td></tr>';
         statusEl.classList.add('error');
-        statusEl.textContent = `Error: ${error.message}`;
-        prevBtn.disabled = page === 0;
+        statusEl.textContent = 'User management requires Cloud Functions (Blaze plan), which are not deployed on this project.';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        pageInfo.textContent = '—';
         return;
       }
 
@@ -309,7 +311,7 @@
         btn.disabled = false;
         btn.textContent = 'Delete';
         statusEl.classList.add('error');
-        statusEl.textContent = `Error deleting ${email}: ${error.message}`;
+        statusEl.textContent = `Cannot delete ${email}: user deletion requires Cloud Functions (Blaze plan).`;
         return;
       }
       statusEl.classList.remove('error');
