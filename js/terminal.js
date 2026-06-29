@@ -118,6 +118,10 @@ const COMMANDS = {
 
   async list(args) {
     if (!requireLogin()) return;
+    if (args.trim() === 'close') {
+      closeHelpSidebar();
+      return;
+    }
     await openListSidebar(args.trim());
   },
 
@@ -176,6 +180,9 @@ const COMMANDS = {
     const parts = args.trim().split(/\s+/);
     if (parts.length < 2 || !parts[1]) { print('Usage: untag <hash> <tagname>', 'error'); return; }
     const [filename, tag] = parts;
+    if (!docs[filename] && !await dbFileExists(filename)) {
+      print(`Error: "${filename}" does not exist.`, 'error'); return;
+    }
     if (await removeFileTag(filename, tag)) {
       print(`Removed #${tag} from "${filename}"`, 'success');
     } else {
