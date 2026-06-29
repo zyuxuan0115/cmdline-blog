@@ -230,11 +230,12 @@ const COMMANDS = {
   whoami() { authWhoami(); },
   unregister() { authUnregister(); },
 
-  hotkeys() {
-    print('Keyboard shortcuts:', 'info');
-    print('  Ctrl + `      toggle focus between terminal and document window', 'muted');
-    print('  ↑ / ↓         browse command history', 'muted');
-    print('  Enter         run the current command', 'muted');
+  hotkeys(args) {
+    if (args.trim() === 'close') {
+      closeHelpSidebar();
+      return;
+    }
+    openHotkeysSidebar();
   },
 
   clear() {

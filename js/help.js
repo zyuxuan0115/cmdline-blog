@@ -46,17 +46,24 @@ const HELP_SECTIONS = [
     title: 'Terminal',
     entries: [
       ['clear',      'clear terminal output'],
-      ['hotkeys',    'show keyboard shortcuts'],
+      ['hotkeys',       'show keyboard shortcuts'],
+      ['hotkeys close', 'close the hotkeys sidebar'],
       ['commands',       'open this sidebar'],
       ['commands close', 'close this sidebar'],
     ]
   }
 ];
 
+const HOTKEYS = [
+  ['Ctrl + `', 'toggle focus between terminal and document window'],
+  ['↑ / ↓',    'browse command history'],
+  ['Enter',    'run the current command'],
+];
+
 const helpSidebar = document.getElementById('help-sidebar');
 const helpContent = document.getElementById('help-sidebar-content');
 const sidebarTitle = document.getElementById('help-sidebar-title');
-let currentSidebarView = null; // 'help' or 'list'
+let currentSidebarView = null; // 'help', 'list', or 'hotkeys'
 let lastListedDocs = []; // docs from the most recent  list  command, in display order
 let lastListFilter = ''; // '', 'public', 'mywork', or 'private'
 
@@ -119,6 +126,22 @@ function swapSidebarContent(newHTML, newView, titleText) {
     helpContent.classList.remove('slide-in');
     currentSidebarView = newView;
   }, 200);
+}
+
+function buildHotkeysHTML() {
+  return `
+    <div class="help-section">
+      <div class="help-section-title">Keyboard Shortcuts</div>
+      ${HOTKEYS.map(([key, desc]) =>
+        `<div class="help-entry"><code>${key}</code><br><span>— ${desc}</span></div>`
+      ).join('')}
+    </div>
+  `;
+}
+
+function openHotkeysSidebar() {
+  swapSidebarContent(buildHotkeysHTML(), 'hotkeys', 'Hotkeys');
+  print('Hotkeys opened on the right.', 'muted');
 }
 
 function openHelpSidebar() {
