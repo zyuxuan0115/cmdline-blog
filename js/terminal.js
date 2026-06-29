@@ -140,8 +140,27 @@ const COMMANDS = {
   async tag(args) {
     if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
-    if (parts.length < 2 || !parts[1]) { print('Usage: tag <hash> <tagname>', 'error'); return; }
-    const [filename, tag] = parts;
+    const flag = parts[0];
+    if ((flag !== '-h' && flag !== '-i') || parts.length < 3 || !parts[2]) {
+      print('Usage: tag -h <hash> <tag>  |  tag -i <index> <tag>', 'error'); return;
+    }
+    const [, target, tag] = parts;
+
+    let filename;
+    if (flag === '-i') {
+      if (!/^\d+$/.test(target)) { print('Usage: tag -i <index> <tag>', 'error'); return; }
+      if (currentSidebarView !== 'list') {
+        print('Error: list sidebar is not open. Run  list  first.', 'error'); return;
+      }
+      const idx = parseInt(target, 10);
+      if (idx < 1 || idx > lastListedDocs.length) {
+        print(`Error: index ${idx} not in last list.`, 'error'); return;
+      }
+      filename = lastListedDocs[idx - 1].filename;
+    } else {
+      filename = target;
+    }
+
     if (!docs[filename] && !await dbFileExists(filename)) {
       print(`Error: "${filename}" does not exist.`, 'error'); return;
     }

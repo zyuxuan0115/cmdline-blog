@@ -18,7 +18,8 @@ const HELP_SECTIONS = [
   {
     title: 'Tags',
     entries: [
-      ['tag &lt;hash&gt; &lt;tag&gt;',   'add a tag'],
+      ['tag -h &lt;hash&gt; &lt;tag&gt;',   'add a tag by hash'],
+      ['tag -i &lt;index&gt; &lt;tag&gt;',  'add a tag by list index'],
       ['untag &lt;hash&gt; &lt;tag&gt;', 'remove a tag'],
       ['tags [tag]',                     'list tags or files under a tag'],
     ]
