@@ -7,6 +7,11 @@ let zCounter = 100;
 let currentUser = null;   // currently logged-in Firebase user
 let pendingAction = null; // callback for confirmation prompts (e.g. unregister)
 
+// The admin's Firebase Auth account is reserved for the admin console only —
+// it must never be usable as a normal user inside the app terminal.
+// Must match ADMIN_UID in the admin/* pages and isAdmin() in firestore.rules.
+const ADMIN_UID = 'BqXArSXr1pWbYkAo5FTCzDPFESH2';
+
 // ─── Shared DOM refs ─────────────────────────────────────────────────────────
 
 const output   = document.getElementById('terminal-output');
