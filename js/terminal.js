@@ -140,7 +140,7 @@ const COMMANDS = {
   async tag(args) {
     if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
-    if (parts.length < 2 || !parts[1]) { print('Usage: tag <filename> <tagname>', 'error'); return; }
+    if (parts.length < 2 || !parts[1]) { print('Usage: tag <hash> <tagname>', 'error'); return; }
     const [filename, tag] = parts;
     if (!docs[filename] && !await dbFileExists(filename)) {
       print(`Error: "${filename}" does not exist.`, 'error'); return;
@@ -155,7 +155,7 @@ const COMMANDS = {
   async untag(args) {
     if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
-    if (parts.length < 2 || !parts[1]) { print('Usage: untag <filename> <tagname>', 'error'); return; }
+    if (parts.length < 2 || !parts[1]) { print('Usage: untag <hash> <tagname>', 'error'); return; }
     const [filename, tag] = parts;
     if (await removeFileTag(filename, tag)) {
       print(`Removed #${tag} from "${filename}"`, 'success');
@@ -183,7 +183,7 @@ const COMMANDS = {
   async publish(args) {
     if (!requireLogin()) return;
     const name = args.trim();
-    if (!name) { print('Usage: publish <filename>', 'error'); return; }
+    if (!name) { print('Usage: publish <hash>', 'error'); return; }
     if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
     await dbSetVisibility(name, 'public');
     print(`"${name}" is now public.`, 'success');
@@ -192,7 +192,7 @@ const COMMANDS = {
   async unpublish(args) {
     if (!requireLogin()) return;
     const name = args.trim();
-    if (!name) { print('Usage: unpublish <filename>', 'error'); return; }
+    if (!name) { print('Usage: unpublish <hash>', 'error'); return; }
     if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
     await dbSetVisibility(name, 'private');
     print(`"${name}" is now private.`, 'success');
