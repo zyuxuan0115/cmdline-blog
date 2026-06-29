@@ -257,11 +257,15 @@
       // paginate client-side. Fine for a blog-sized user base.
       let all;
       try {
-        const snap = await _db.collection('users').orderBy('created_at', 'desc').get();
+        // Don't use orderBy('created_at') here: Firestore drops any document
+        // missing that field, which would hide users without a created_at. Fetch
+        // every doc, then sort client-side (missing dates sink to the bottom).
+        const snap = await _db.collection('users').get();
         all = snap.docs.map(d => {
           const u = d.data();
           return { id: u.uid || d.id, email: u.email, username: u.username, created_at: u.created_at };
         });
+        all.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
       } catch (error) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#889;">Unavailable</td></tr>';
         statusEl.classList.add('error');
