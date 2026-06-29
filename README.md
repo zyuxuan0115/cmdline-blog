@@ -35,11 +35,11 @@ A web-based markdown document editor with a retro terminal interface and animate
 | `open <filename>` | Open / focus a document |
 | `close <filename>` | Close a document window |
 | `list` | List all your documents |
-| `tag <filename> <tag>` | Add a tag |
-| `untag <filename> <tag>` | Remove a tag |
+| `tag <hash> <tag>` | Add a tag |
+| `untag <hash> <tag>` | Remove a tag |
 | `tags [tag]` | List tags or files under a tag |
-| `publish <filename>` | Make a document public |
-| `unpublish <filename>` | Make a document private |
+| `publish <hash>` | Make a document public |
+| `unpublish <hash>` | Make a document private |
 | `clear` | Clear terminal output |
 | `help` | Open help sidebar |
 | `help close` | Close help sidebar |
