@@ -294,9 +294,9 @@
         }).join('');
       }
 
-      const start = page * PAGE_SIZE + (shown.length ? 1 : 0);
-      const end = page * PAGE_SIZE + shown.length;
-      pageInfo.textContent = shown.length ? `Showing ${start}–${end}` : '—';
+      const rangeStart = page * PAGE_SIZE + (shown.length ? 1 : 0);
+      const rangeEnd = page * PAGE_SIZE + shown.length;
+      pageInfo.textContent = shown.length ? `Showing ${rangeStart}–${rangeEnd}` : '—';
 
       prevBtn.disabled = page === 0;
       nextBtn.disabled = !hasNext;
