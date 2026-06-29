@@ -14,10 +14,13 @@ if (girlBubble) {
 // Restore existing session on page load
 let _sessionRestored = false;
 if (_auth) _auth.onAuthStateChanged((user) => {
-  // A session left over from the admin console must not leak into the app
-  // terminal — sign it out so the admin account is never treated as a user.
+  // The admin's Firebase session is shared across this origin (e.g. the admin
+  // console open in another tab). Don't sign it out — that would propagate to
+  // every tab and kick the admin out of the dashboard. Just refuse to treat the
+  // admin as a logged-in user of the app terminal, leaving the console intact.
   if (user && user.uid === ADMIN_UID) {
-    _auth.signOut();
+    currentUser = null;
+    updatePrompt(null);
     return;
   }
   currentUser = user;

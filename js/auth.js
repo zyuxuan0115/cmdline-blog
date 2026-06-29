@@ -57,8 +57,9 @@ async function authLogin(args) {
   try {
     const cred = await _auth.signInWithEmailAndPassword(email, password);
     // The admin account belongs to the admin console, not the app terminal.
+    // Don't sign out (the session is shared per-origin and may belong to an open
+    // admin console) — just refuse to treat it as a logged-in app user.
     if (cred.user.uid === ADMIN_UID) {
-      await _auth.signOut();
       currentUser = null;
       updatePrompt(null);
       print('This is an admin account and cannot be used to sign in here.', 'error');
