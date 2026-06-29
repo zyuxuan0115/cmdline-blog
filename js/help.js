@@ -18,16 +18,16 @@ const HELP_SECTIONS = [
   {
     title: 'Tags',
     entries: [
-      ['tag &lt;filename&gt; &lt;tag&gt;',   'add a tag'],
-      ['untag &lt;filename&gt; &lt;tag&gt;', 'remove a tag'],
+      ['tag &lt;hash&gt; &lt;tag&gt;',   'add a tag'],
+      ['untag &lt;hash&gt; &lt;tag&gt;', 'remove a tag'],
       ['tags [tag]',                     'list tags or files under a tag'],
     ]
   },
   {
     title: 'Visibility',
     entries: [
-      ['publish &lt;filename&gt;',   'make a document public'],
-      ['unpublish &lt;filename&gt;', 'make a document private'],
+      ['publish &lt;hash&gt;',   'make a document public'],
+      ['unpublish &lt;hash&gt;', 'make a document private'],
     ]
   },
   {
