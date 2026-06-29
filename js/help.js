@@ -46,8 +46,9 @@ const HELP_SECTIONS = [
     title: 'Terminal',
     entries: [
       ['clear',      'clear terminal output'],
-      ['help',       'open this sidebar'],
-      ['help close', 'close this sidebar'],
+      ['hotkeys',    'show keyboard shortcuts'],
+      ['commands',       'open this sidebar'],
+      ['commands close', 'close this sidebar'],
     ]
   }
 ];

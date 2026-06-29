@@ -1,14 +1,14 @@
 // ─── Terminal ─────────────────────────────────────────────────────────────────
 
 function printBanner() {
-  print('Type  help  to see available commands.', 'info');
+  print('Type  commands  to see available commands.', 'info');
   print('', 'muted');
 }
 
 // ─── Command parsing ──────────────────────────────────────────────────────────
 
 const COMMANDS = {
-  help(args) {
+  commands(args) {
     if (args.trim() === 'close') {
       closeHelpSidebar();
       return;
@@ -230,6 +230,13 @@ const COMMANDS = {
   whoami() { authWhoami(); },
   unregister() { authUnregister(); },
 
+  hotkeys() {
+    print('Keyboard shortcuts:', 'info');
+    print('  Ctrl + `      toggle focus between terminal and document window', 'muted');
+    print('  ↑ / ↓         browse command history', 'muted');
+    print('  Enter         run the current command', 'muted');
+  },
+
   clear() {
     output.innerHTML = '';
   }
@@ -250,7 +257,7 @@ function runCommand(raw) {
   if (COMMANDS[cmd]) {
     COMMANDS[cmd](args);
   } else {
-    print(`Unknown command: "${cmd}". Type  help  for a list.`, 'error');
+    print(`Unknown command: "${cmd}". Type  commands  for a list.`, 'error');
   }
 }
 
