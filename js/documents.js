@@ -89,6 +89,7 @@ function updateHint() {
         <div class="desktop-about">
           <h3>About</h3>
           <p>A retro terminal-style blog for writing, tagging, and publishing markdown documents. Public posts are shared with everyone; private notes stay just for you. Type <code>commands</code> in the terminal below to get started.</p>
+          <h3>Source Code</h3>
           <p class="desktop-about-repo"><a href="https://github.com/zyuxuan0115/test1" target="_blank" rel="noopener">github.com/zyuxuan0115/test1</a></p>
         </div>`;
       container.appendChild(hint);
