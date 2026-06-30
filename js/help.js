@@ -28,8 +28,10 @@ const HELP_SECTIONS = [
   {
     title: 'Visibility',
     entries: [
-      ['publish &lt;hash&gt;',   'make a document public'],
-      ['unpublish &lt;hash&gt;', 'make a document private'],
+      ['publish -h &lt;hash&gt;',   'make a document public by hash'],
+      ['publish -i &lt;index&gt;',  'make a document public by list index'],
+      ['unpublish -h &lt;hash&gt;',  'make a document private by hash'],
+      ['unpublish -i &lt;index&gt;', 'make a document private by list index'],
     ]
   },
   {
@@ -56,8 +58,8 @@ const HELP_SECTIONS = [
 
 const HOTKEYS = [
   ['Ctrl + `', 'toggle focus between terminal and document window'],
+  ['Ctrl + 1', 'focus the next document window'],
   ['↑ / ↓',    'browse command history'],
-  ['Enter',    'run the current command'],
 ];
 
 const helpSidebar = document.getElementById('help-sidebar');

@@ -7,6 +7,23 @@ function printBanner() {
 
 // ─── Command parsing ──────────────────────────────────────────────────────────
 
+// Resolve a `-h <hash>` or `-i <index>` reference to a filename.
+// Returns the filename, or null after printing an error.
+function resolveDocRef(flag, value) {
+  if (flag === '-i') {
+    if (!/^\d+$/.test(value)) { print('Error: index must be a number.', 'error'); return null; }
+    if (currentSidebarView !== 'list') {
+      print('Error: list sidebar is not open. Run  list  first.', 'error'); return null;
+    }
+    const idx = parseInt(value, 10);
+    if (idx < 1 || idx > lastListedDocs.length) {
+      print(`Error: index ${idx} not in last list.`, 'error'); return null;
+    }
+    return lastListedDocs[idx - 1].filename;
+  }
+  return value; // -h <hash>
+}
+
 const COMMANDS = {
   commands(args) {
     if (args.trim() === 'close') {
@@ -150,20 +167,8 @@ const COMMANDS = {
     }
     const [, target, tag] = parts;
 
-    let filename;
-    if (flag === '-i') {
-      if (!/^\d+$/.test(target)) { print('Usage: tag -i <index> <tag>', 'error'); return; }
-      if (currentSidebarView !== 'list') {
-        print('Error: list sidebar is not open. Run  list  first.', 'error'); return;
-      }
-      const idx = parseInt(target, 10);
-      if (idx < 1 || idx > lastListedDocs.length) {
-        print(`Error: index ${idx} not in last list.`, 'error'); return;
-      }
-      filename = lastListedDocs[idx - 1].filename;
-    } else {
-      filename = target;
-    }
+    const filename = resolveDocRef(flag, target);
+    if (!filename) return;
 
     if (!docs[filename] && !await dbFileExists(filename)) {
       print(`Error: "${filename}" does not exist.`, 'error'); return;
@@ -208,8 +213,13 @@ const COMMANDS = {
 
   async publish(args) {
     if (!requireLogin()) return;
-    const name = args.trim();
-    if (!name) { print('Usage: publish <hash>', 'error'); return; }
+    const parts = args.trim().split(/\s+/);
+    const flag = parts[0];
+    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
+      print('Usage: publish -h <hash>  |  publish -i <index>', 'error'); return;
+    }
+    const name = resolveDocRef(flag, parts[1]);
+    if (!name) return;
     if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
     await dbSetVisibility(name, 'public');
     print(`"${name}" is now public.`, 'success');
@@ -217,8 +227,13 @@ const COMMANDS = {
 
   async unpublish(args) {
     if (!requireLogin()) return;
-    const name = args.trim();
-    if (!name) { print('Usage: unpublish <hash>', 'error'); return; }
+    const parts = args.trim().split(/\s+/);
+    const flag = parts[0];
+    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
+      print('Usage: unpublish -h <hash>  |  unpublish -i <index>', 'error'); return;
+    }
+    const name = resolveDocRef(flag, parts[1]);
+    if (!name) return;
     if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
     await dbSetVisibility(name, 'private');
     print(`"${name}" is now private.`, 'success');
@@ -318,6 +333,27 @@ document.addEventListener('keydown', e => {
       }
     } else {
       input.focus();
+    }
+  }
+});
+
+// Ctrl+1 cycle focus to the next document window
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === '1' || e.code === 'Digit1')) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const wins = Array.from(document.querySelectorAll('.doc-window'));
+    if (wins.length === 0) return;
+
+    const current = document.querySelector('.doc-window.focused');
+    const idx = current ? wins.indexOf(current) : -1;
+    const next = wins[(idx + 1) % wins.length];
+
+    focusWindow(next);
+    const editor = next.querySelector('textarea.doc-editor');
+    if (editor && editor.style.display !== 'none') {
+      editor.focus();
     }
   }
 });

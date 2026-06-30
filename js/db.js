@@ -11,6 +11,7 @@ async function dbFileExists(name) {
 async function dbSetVisibility(name, vis) {
   await _db.collection('documents').doc(name).update({ visibility: vis });
   if (docs[name]) { docs[name].visibility = vis; docs[name].win._refreshVisBtn(); }
+  updateListSidebarDoc(name, { visibility: vis });
 }
 
 // ─── Tag Helpers (Firestore) ──────────────────────────────────────────────────
