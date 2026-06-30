@@ -770,3 +770,31 @@ input, textarea, button, select {
   font-family: 'Cubic 11', monospace;
   font-size: 10px;
 }
+#desktop-hint .desktop-about {
+  max-width: 360px;
+  margin: 0 auto;
+}
+#desktop-hint .desktop-about h3 {
+  font-family: 'Cubic 11', monospace;
+  font-size: 11px;
+  color: #ffadd6;
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+#desktop-hint .desktop-about p {
+  font-family: 'Cubic 11', monospace;
+  font-size: 10px;
+  color: #5a7088;
+  line-height: 1.8;
+  margin-bottom: 14px;
+}
+#desktop-hint .desktop-about a {
+  color: #88aaff;
+  text-decoration: none;
+  pointer-events: auto; /* parent #desktop-hint sets pointer-events: none */
+}
+#desktop-hint .desktop-about a:hover {
+  color: #aac4ff;
+  text-decoration: underline;
+}

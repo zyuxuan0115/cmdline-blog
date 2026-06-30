@@ -85,7 +85,12 @@ function updateHint() {
     if (!hint) {
       hint = document.createElement('div');
       hint.id = 'desktop-hint';
-      hint.innerHTML = `<h2>No documents open</h2><p>Type <code>create my-doc.md</code> in the terminal below</p>`;
+      hint.innerHTML = `<h2>No documents open</h2>
+        <div class="desktop-about">
+          <h3>About</h3>
+          <p>A retro terminal-style blog for writing, tagging, and publishing markdown documents. Public posts are shared with everyone; private notes stay just for you. Type <code>commands</code> in the terminal below to get started.</p>
+          <p class="desktop-about-repo"><a href="https://github.com/zyuxuan0115/test1" target="_blank" rel="noopener">github.com/zyuxuan0115/test1</a></p>
+        </div>`;
       container.appendChild(hint);
     }
   } else if (hint) {
