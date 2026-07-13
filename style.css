@@ -359,6 +359,7 @@ input, textarea, button, select {
 /* ============== Document Window ============== */
 .doc-window {
   position: absolute;
+  outline: none;
   background: #161636;
   border: 4px solid #ffadd6;
   box-shadow:

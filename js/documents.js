@@ -105,6 +105,9 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   if (readOnly) initialMode = 'preview';
   const win = document.createElement('div');
   win.className = 'doc-window';
+  // Focusable so Ctrl+` can move DOM focus here even in preview mode
+  // (where the editor textarea is hidden and nothing else is focusable).
+  win.tabIndex = -1;
 
   // Random initial position
   const maxX = Math.max(0, container.clientWidth - 600);
@@ -349,6 +352,9 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     titleInput.readOnly = true;
     win.classList.add('preview-mode');
   }
+
+  // Expose the edit switcher so Ctrl+` can flip an owned doc into edit mode.
+  if (!readOnly) win._switchToEdit = switchToEdit;
 
   if (!readOnly) {
     btnEdit.addEventListener('click', switchToEdit);

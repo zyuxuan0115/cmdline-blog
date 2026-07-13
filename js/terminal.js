@@ -329,6 +329,14 @@ document.addEventListener('keydown', e => {
         const editor = targetWin.querySelector('textarea.doc-editor');
         if (editor && editor.style.display !== 'none') {
           editor.focus();
+        } else if (targetWin._switchToEdit) {
+          // Preview mode on an owned doc: flip to edit mode (which focuses
+          // the editor, so the next Ctrl+` toggles back to the terminal).
+          targetWin._switchToEdit();
+        } else {
+          // Read-only doc: keep preview, just focus the window so the next
+          // Ctrl+` correctly toggles back to the terminal.
+          targetWin.focus();
         }
       }
     } else {
