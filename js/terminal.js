@@ -306,6 +306,30 @@ input.addEventListener('keydown', e => {
   }
 });
 
+// Move focus into a document window; switch owned preview docs to edit mode.
+function focusIntoWindow(win) {
+  focusWindow(win);
+  const editor = win.querySelector('textarea.doc-editor');
+  const inPreview = !editor || editor.style.display === 'none';
+  if (inPreview && win._switchToEdit) {
+    win._switchToEdit();       // owned doc in preview → edit (focuses the editor)
+  } else if (editor && editor.style.display !== 'none') {
+    editor.focus();            // already in edit mode
+  } else {
+    win.focus();               // read-only doc → keep preview, focus the window
+  }
+}
+
+// Return the top-most (highest z-index) document window, or null if none.
+function topmostWindow() {
+  let top = null, maxZ = -Infinity;
+  document.querySelectorAll('.doc-window').forEach(w => {
+    const z = parseInt(w.style.zIndex) || 0;
+    if (z >= maxZ) { maxZ = z; top = w; }
+  });
+  return top;
+}
+
 // Ctrl+` toggle focus between terminal and last focused document window.
 // When it moves focus into an owned document that's in preview mode, it flips
 // that document to edit mode; read-only documents stay in preview.
@@ -317,31 +341,10 @@ document.addEventListener('keydown', e => {
   const active = document.activeElement;
   const inTerminal = active === input || (active && active.closest('#terminal-panel'));
 
-  // Move focus into a document window; switch owned preview docs to edit mode.
-  const focusInto = win => {
-    focusWindow(win);
-    const editor = win.querySelector('textarea.doc-editor');
-    const inPreview = !editor || editor.style.display === 'none';
-    if (inPreview && win._switchToEdit) {
-      win._switchToEdit();       // owned doc in preview → edit (focuses the editor)
-    } else if (editor && editor.style.display !== 'none') {
-      editor.focus();            // already in edit mode
-    } else {
-      win.focus();               // read-only doc → keep preview, focus the window
-    }
-  };
-
   if (inTerminal) {
     // From the terminal: go to the focused (or top-most) document window.
-    let targetWin = document.querySelector('.doc-window.focused');
-    if (!targetWin) {
-      let maxZ = -1;
-      document.querySelectorAll('.doc-window').forEach(w => {
-        const z = parseInt(w.style.zIndex) || 0;
-        if (z > maxZ) { maxZ = z; targetWin = w; }
-      });
-    }
-    if (targetWin) focusInto(targetWin);
+    const targetWin = document.querySelector('.doc-window.focused') || topmostWindow();
+    if (targetWin) focusIntoWindow(targetWin);
   } else {
     // Focus is in a document window. If it's an owned doc still in preview,
     // flip it to edit mode; otherwise toggle back to the terminal.
@@ -354,6 +357,38 @@ document.addEventListener('keydown', e => {
       input.focus();
     }
   }
+});
+
+// Ctrl+X close the current document window. If another window remains, make it
+// the current window; otherwise move focus back to the terminal.
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey && (e.key === 'x' || e.key === 'X' || e.code === 'KeyX'))) return;
+
+  const active = document.activeElement;
+  const win = (active && active.closest('.doc-window'))
+    || document.querySelector('.doc-window.focused');
+  if (!win) return;   // nothing to close — let the default Ctrl+X (cut) proceed
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const key = Object.keys(docs).find(k => docs[k].win === win);
+  if (!key) return;
+  closeDocument(key);
+  print(`Closed: ${key}`, 'success');
+
+  const next = topmostWindow();
+  if (next) focusIntoWindow(next);
+  else input.focus();
+});
+
+// Ctrl+Z close the list / commands / shortcuts sidebar (if one is open).
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ'))) return;
+  if (!helpSidebar.classList.contains('open')) return;   // nothing open → let default undo proceed
+  e.preventDefault();
+  e.stopPropagation();
+  closeHelpSidebar();
 });
 
 // Ctrl+1 cycle focus to the next document window
