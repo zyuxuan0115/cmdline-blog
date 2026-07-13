@@ -306,39 +306,50 @@ input.addEventListener('keydown', e => {
   }
 });
 
-// Ctrl+` toggle focus between terminal and last focused document window
+// Ctrl+` toggle focus between terminal and last focused document window.
+// When it moves focus into an owned document that's in preview mode, it flips
+// that document to edit mode; read-only documents stay in preview.
 document.addEventListener('keydown', e => {
-  if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote' || e.keyCode === 192)) {
-    e.preventDefault();
-    e.stopPropagation();
+  if (!(e.ctrlKey && (e.key === '`' || e.code === 'Backquote' || e.keyCode === 192))) return;
+  e.preventDefault();
+  e.stopPropagation();
 
-    const isTerminalFocused = document.activeElement === input
-      || document.activeElement.closest('#terminal-panel');
+  const active = document.activeElement;
+  const inTerminal = active === input || (active && active.closest('#terminal-panel'));
 
-    if (isTerminalFocused) {
-      let targetWin = document.querySelector('.doc-window.focused');
-      if (!targetWin) {
-        let maxZ = -1;
-        document.querySelectorAll('.doc-window').forEach(w => {
-          const z = parseInt(w.style.zIndex) || 0;
-          if (z > maxZ) { maxZ = z; targetWin = w; }
-        });
-      }
-      if (targetWin) {
-        focusWindow(targetWin);
-        const editor = targetWin.querySelector('textarea.doc-editor');
-        if (editor && editor.style.display !== 'none') {
-          editor.focus();
-        } else if (targetWin._switchToEdit) {
-          // Preview mode on an owned doc: flip to edit mode (which focuses
-          // the editor, so the next Ctrl+` toggles back to the terminal).
-          targetWin._switchToEdit();
-        } else {
-          // Read-only doc: keep preview, just focus the window so the next
-          // Ctrl+` correctly toggles back to the terminal.
-          targetWin.focus();
-        }
-      }
+  // Move focus into a document window; switch owned preview docs to edit mode.
+  const focusInto = win => {
+    focusWindow(win);
+    const editor = win.querySelector('textarea.doc-editor');
+    const inPreview = !editor || editor.style.display === 'none';
+    if (inPreview && win._switchToEdit) {
+      win._switchToEdit();       // owned doc in preview → edit (focuses the editor)
+    } else if (editor && editor.style.display !== 'none') {
+      editor.focus();            // already in edit mode
+    } else {
+      win.focus();               // read-only doc → keep preview, focus the window
+    }
+  };
+
+  if (inTerminal) {
+    // From the terminal: go to the focused (or top-most) document window.
+    let targetWin = document.querySelector('.doc-window.focused');
+    if (!targetWin) {
+      let maxZ = -1;
+      document.querySelectorAll('.doc-window').forEach(w => {
+        const z = parseInt(w.style.zIndex) || 0;
+        if (z > maxZ) { maxZ = z; targetWin = w; }
+      });
+    }
+    if (targetWin) focusInto(targetWin);
+  } else {
+    // Focus is in a document window. If it's an owned doc still in preview,
+    // flip it to edit mode; otherwise toggle back to the terminal.
+    const win = (active && active.closest('.doc-window'))
+      || document.querySelector('.doc-window.focused');
+    const editor = win && win.querySelector('textarea.doc-editor');
+    if (win && win._switchToEdit && editor && editor.style.display === 'none') {
+      win._switchToEdit();
     } else {
       input.focus();
     }
