@@ -20,60 +20,75 @@ function myName() {
 
 // ─── DB actions ───────────────────────────────────────────────────────────────
 
-async function sendFriendRequest(targetUid) {
+// Resolve a username to { uid, username } via the public usernames mapping.
+// Prints an error and returns null if the name is unknown.
+async function resolveUsername(name) {
+  const snap = await _db.collection('usernames').doc(name.toLowerCase()).get();
+  if (!snap.exists) { print(`No user named "${name}".`, 'error'); return null; }
+  const d = snap.data();
+  return { uid: d.uid, username: d.username || name };
+}
+
+async function sendFriendRequest(username) {
   if (!requireLogin()) return;
-  targetUid = (targetUid || '').trim();
-  if (!targetUid) { print('Usage: friend <user_id>', 'error'); return; }
-  if (targetUid === currentUser.uid) { print("You can't friend yourself.", 'error'); return; }
+  username = (username || '').trim();
+  if (!username) { print('Usage: friend <username>', 'error'); return; }
 
   try {
+    const target = await resolveUsername(username);
+    if (!target) return;
+    if (target.uid === currentUser.uid) { print("You can't friend yourself.", 'error'); return; }
+
     // Already friends?
-    const fs = await _db.collection('friendships').doc(friendshipId(currentUser.uid, targetUid)).get();
-    if (fs.exists) { print('You are already friends with that user.', 'muted'); return; }
+    const fs = await _db.collection('friendships').doc(friendshipId(currentUser.uid, target.uid)).get();
+    if (fs.exists) { print(`You are already friends with ${target.username}.`, 'muted'); return; }
 
     // Already have a pending request out to them? (query only our own sent messages)
     const sent = await _db.collection('messages').where('from_uid', '==', currentUser.uid).get();
     const dup = sent.docs.some(d => {
       const m = d.data();
-      return m.to_uid === targetUid && m.type === 'friend_request' && m.status === 'pending';
+      return m.to_uid === target.uid && m.type === 'friend_request' && m.status === 'pending';
     });
-    if (dup) { print('You already have a pending friend request to that user.', 'muted'); return; }
+    if (dup) { print(`You already have a pending friend request to ${target.username}.`, 'muted'); return; }
 
     await _db.collection('messages').add({
       from_uid: currentUser.uid,
       from_name: myName(),
-      to_uid: targetUid,
+      to_uid: target.uid,
       type: 'friend_request',
       text: `${myName()} wants to be your friend.`,
       status: 'pending',
       read: false,
       created_at: new Date().toISOString(),
     });
-    print(`Friend request sent to ${targetUid}.`, 'success');
+    print(`Friend request sent to ${target.username}.`, 'success');
   } catch (e) {
     print(`Error: ${e.message}`, 'error');
   }
 }
 
-async function sendDirectMessage(targetUid, text) {
+async function sendDirectMessage(username, text) {
   if (!requireLogin()) return;
-  targetUid = (targetUid || '').trim();
+  username = (username || '').trim();
   text = (text || '').trim();
-  if (!targetUid || !text) { print("Usage: message <user_id> <text>", 'error'); return; }
-  if (targetUid === currentUser.uid) { print("You can't message yourself.", 'error'); return; }
+  if (!username || !text) { print("Usage: message <username> <text>", 'error'); return; }
 
   try {
+    const target = await resolveUsername(username);
+    if (!target) return;
+    if (target.uid === currentUser.uid) { print("You can't message yourself.", 'error'); return; }
+
     await _db.collection('messages').add({
       from_uid: currentUser.uid,
       from_name: myName(),
-      to_uid: targetUid,
+      to_uid: target.uid,
       type: 'text',
       text,
       status: 'none',
       read: false,
       created_at: new Date().toISOString(),
     });
-    print(`Message sent to ${targetUid}.`, 'success');
+    print(`Message sent to ${target.username}.`, 'success');
   } catch (e) {
     print(`Error: ${e.message}`, 'error');
   }
@@ -180,10 +195,10 @@ function buildMessagesHTML(inbox, friends) {
   const requests = inbox.filter(m => m.type === 'friend_request' && m.status === 'pending');
   const others = inbox.filter(m => m.type === 'text' || m.type === 'friend_accept');
 
-  const myId = `
+  const youSection = `
     <div class="help-section">
-      <div class="help-section-title">Your ID</div>
-      <div class="help-entry"><code style="word-break:break-all">${escapeHtml(currentUser.uid)}</code><br><span>— share this so others can  friend  you</span></div>
+      <div class="help-section-title">You</div>
+      <div class="help-entry"><code>${escapeHtml(currentUser.displayName || currentUser.email)}</code><br><span>— others can add you with  friend ${escapeHtml(currentUser.displayName || '')}</span></div>
     </div>`;
 
   const reqSection = `
@@ -191,9 +206,9 @@ function buildMessagesHTML(inbox, friends) {
       <div class="help-section-title">Friend Requests${requests.length ? ` (${requests.length})` : ''}</div>
       ${requests.length ? requests.map(m => `
         <div class="help-entry">
-          <code>${escapeHtml(m.from_name || m.from_uid)}</code><br>
+          <code>${escapeHtml(m.from_name)}</code><br>
           <span>${escapeHtml(m.text)}</span><br>
-          <span style="color:#556677;font-size:0.85em">id: ${escapeHtml(m.from_uid)} · ${formatTimeAgo(m.created_at)}</span><br>
+          <span style="color:#556677;font-size:0.85em">${formatTimeAgo(m.created_at)}</span><br>
           <button class="msg-btn accept" onclick="acceptFriend('${m.id}')">accept</button>
           <button class="msg-btn ignore" onclick="ignoreFriend('${m.id}')">ignore</button>
         </div>`).join('') : `<div class="help-entry"><span>No pending requests.</span></div>`}
@@ -208,9 +223,9 @@ function buildMessagesHTML(inbox, friends) {
           : '';
         return `
         <div class="help-entry">
-          <code>${escapeHtml(m.from_name || m.from_uid)}</code>${tag}<br>
+          <code>${escapeHtml(m.from_name)}</code>${tag}<br>
           <span>${escapeHtml(m.text)}</span><br>
-          <span style="color:#556677;font-size:0.85em">id: ${escapeHtml(m.from_uid)} · ${formatTimeAgo(m.created_at)}</span>
+          <span style="color:#556677;font-size:0.85em">${formatTimeAgo(m.created_at)}</span>
         </div>`;
       }).join('') : `<div class="help-entry"><span>No messages.</span></div>`}
     </div>`;
@@ -219,11 +234,9 @@ function buildMessagesHTML(inbox, friends) {
     <div class="help-section">
       <div class="help-section-title">Friends${friends.length ? ` (${friends.length})` : ''}</div>
       ${friends.length ? friends.map(f => `
-        <div class="help-entry">
-          <code>${escapeHtml(f.name)}</code><br>
-          <span style="color:#556677;font-size:0.85em">id: ${escapeHtml(f.uid)}</span>
-        </div>`).join('') : `<div class="help-entry"><span>No friends yet. Try  friend &lt;user_id&gt;</span></div>`}
+        <div class="help-entry"><code>${escapeHtml(f.name)}</code></div>`).join('')
+        : `<div class="help-entry"><span>No friends yet. Try  friend &lt;username&gt;</span></div>`}
     </div>`;
 
-  return myId + reqSection + msgSection + friendsSection;
+  return youSection + reqSection + msgSection + friendsSection;
 }

@@ -250,7 +250,7 @@ const COMMANDS = {
   message(args) {
     const trimmed = args.trim();
     const sp = trimmed.indexOf(' ');
-    if (sp === -1) { print('Usage: message <user_id> <text>', 'error'); return; }
+    if (sp === -1) { print('Usage: message <username> <text>', 'error'); return; }
     sendDirectMessage(trimmed.slice(0, sp), trimmed.slice(sp + 1));
   },
   msg(args) { COMMANDS.message(args); },

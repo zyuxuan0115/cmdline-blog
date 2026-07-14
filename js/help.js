@@ -47,8 +47,8 @@ const HELP_SECTIONS = [
   {
     title: 'Social',
     entries: [
-      ['friend &lt;user_id&gt;',        'send a friend request'],
-      ['message &lt;user_id&gt; &lt;text&gt;', 'send a direct message'],
+      ['friend &lt;username&gt;',        'send a friend request'],
+      ['message &lt;username&gt; &lt;text&gt;', 'send a direct message'],
       ['messages',                       'open your inbox / friends'],
       ['messages close',                 'close the messages sidebar'],
     ]
@@ -93,13 +93,13 @@ function buildHelpHTML() {
 }
 
 function buildDocEntry(doc, isMine, index) {
-  const { filename, title, visibility, tags, updated_at, author_name, user_id } = doc;
+  const { filename, title, visibility, tags, updated_at, author_name } = doc;
   const displayTitle = title ? `<code>${title}</code>` : `<code>&lt;untitled&gt;</code>`;
   const indexStr = index != null ? `<span style="color:#556677">${index}.</span> ` : '';
   const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
   const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
-  const authorId = !isMine && user_id ? '<br><span style="color:#556677;font-size:0.85em">id: ' + user_id + ' — friend ' + user_id + '</span>' : '';
+  const authorId = !isMine && author_name ? '<br><span style="color:#556677;font-size:0.85em">add: friend ' + author_name + '</span>' : '';
   const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
   const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
   const clickAttr = index != null ? ` style="cursor:pointer" onclick="runCommand('open ${index}')"` : '';

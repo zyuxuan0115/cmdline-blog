@@ -74,6 +74,22 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Username → uid mapping so users can be addressed by name (e.g.
+    // `friend <username>`). The doc id is the lowercased username and it holds
+    // only { uid, username } — never the email — so it is safe to look up.
+    match /usernames/{name} {
+      // A single lookup is public (needed during registration, before sign-in);
+      // enumeration is not.
+      allow get:  if true;
+      allow list: if false;
+      // You may only claim a name that maps to yourself, and only while it is
+      // free (create fails when the doc exists, and updates are forbidden), so
+      // usernames stay unique and can't be hijacked.
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
     // Invitation codes are looked up by id during registration (before sign-in),
     // so a direct get() must be allowed — but listing/enumeration is not.
     match /invitation_codes/{code} {

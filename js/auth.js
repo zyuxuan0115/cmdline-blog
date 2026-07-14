@@ -1,5 +1,21 @@
 // ─── Authentication ───────────────────────────────────────────────────────────
 
+// Ensure the current user has a usernames/<lowercase> → uid mapping so others
+// can address them by name. Best-effort: silently no-ops if the name is already
+// claimed (e.g. by an older account with the same name) or on any error.
+async function ensureUsernameMapping() {
+  if (!currentUser) return;
+  const username = currentUser.displayName;
+  if (!username) return;
+  try {
+    const ref = _db.collection('usernames').doc(username.toLowerCase());
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({ uid: currentUser.uid, username });
+    }
+  } catch (_) { /* mapping is a convenience; ignore failures */ }
+}
+
 // Translate Firebase error codes into clean, user-facing messages.
 function authErrorMessage(e) {
   switch (e && e.code) {
@@ -30,6 +46,12 @@ async function authRegister(args) {
       // Validate invitation code against Firestore (code is the document id)
       const codeSnap = await _db.collection('invitation_codes').doc(trimmedCode).get();
       if (!codeSnap.exists) { print('Error: invalid invitation code.', 'error'); return; }
+      // Usernames are the public identifier (used by `friend <username>`), so they
+      // must be unique. Check availability before creating the account.
+      const nameRef = _db.collection('usernames').doc(username.toLowerCase());
+      if ((await nameRef.get()).exists) {
+        print(`Error: the username "${username}" is already taken.`, 'error'); return;
+      }
       print(`Registering ${username}…`, 'muted');
       const cred = await _auth.createUserWithEmailAndPassword(email, password);
       await cred.user.updateProfile({ displayName: username });
@@ -38,6 +60,8 @@ async function authRegister(args) {
       await _db.collection('users').doc(cred.user.uid).set({
         uid: cred.user.uid, email, username, created_at: new Date().toISOString(),
       });
+      // Claim the username → uid mapping so others can  friend <username>  us.
+      await nameRef.set({ uid: cred.user.uid, username });
       // createUserWithEmailAndPassword auto-signs in, but onAuthStateChanged fired
       // before displayName was set — refresh currentUser and the prompt manually.
       currentUser = cred.user;
@@ -69,6 +93,7 @@ async function authLogin(args) {
     const username = currentUser.displayName || currentUser.email;
     updatePrompt(username);
     print(`Logged in as ${username}`, 'success');
+    ensureUsernameMapping(); // backfill the name→uid mapping for older accounts
   } catch (e) {
     print(`Error: ${authErrorMessage(e)}`, 'error');
   }
@@ -96,7 +121,7 @@ async function authWhoami() {
   if (!user) { print('Not logged in.', 'muted'); return; }
   const username = user.displayName || user.email;
   print(`Logged in as: ${username} (${user.email})`, 'info');
-  print(`Your user id: ${user.uid}`, 'muted');
+  if (user.displayName) print(`Others can add you with:  friend ${user.displayName}`, 'muted');
 }
 
 function authUnregister() {
@@ -116,11 +141,13 @@ function authUnregister() {
     }
     try {
       const uid = currentUser.uid;
+      const uname = currentUser.displayName;
       // Delete all of the user's own documents (rules permit owners to delete).
       const snap = await _db.collection('documents').where('user_id', '==', uid).get();
       const batch = _db.batch();
       snap.docs.forEach(d => batch.delete(d.ref));
       batch.delete(_db.collection('users').doc(uid)); // remove the profile mirror too
+      if (uname) batch.delete(_db.collection('usernames').doc(uname.toLowerCase())); // free the username
       await batch.commit();
       // Delete the auth account itself (allowed for one's own, freshly-reauthed account).
       await currentUser.delete();

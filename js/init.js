@@ -30,6 +30,7 @@ if (_auth) _auth.onAuthStateChanged((user) => {
     if (!_sessionRestored) {
       print(`Restored session: ${username}`, 'muted');
       _sessionRestored = true;
+      ensureUsernameMapping(); // backfill the name→uid mapping for older accounts
     }
   } else {
     updatePrompt(null);
