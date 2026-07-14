@@ -68,8 +68,9 @@ async function openByHash(hash) {
     return;
   }
 
-  // Public foreign doc (read-only)
-  if (d && d.visibility === 'public') {
+  // Foreign doc, read-only. The get() above already succeeded, so the rules
+  // allowed it — public, or shared with us because we're friends.
+  if (d && (d.visibility === 'public' || d.visibility === 'shared')) {
     const key = `${d.author_name || 'unknown'}/${hash}`;
     openDocument(key, d.content, d.visibility, d.title || '', 'preview', true, d.tags || []);
     print(`Opened: ${d.title || key} (read-only)`, 'success');
@@ -214,15 +215,19 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   const visBtn = document.createElement('button');
   visBtn.className = 'toolbar-btn vis-btn';
 
+  // Visibility cycles: private → shared (friends) → public → private.
+  const VIS_LABEL = { private: '🔒 Private', shared: '👥 Shared', public: '🌐 Public' };
+  const VIS_NEXT  = { private: 'shared', shared: 'public', public: 'private' };
+
   function refreshVisBtn() {
     const v = docs[name] ? docs[name].visibility : initialVisibility;
-    visBtn.textContent = v === 'public' ? '🌐 Public' : '🔒 Private';
-    visBtn.title = v === 'public' ? 'Click to make private' : 'Click to make public';
+    visBtn.textContent = VIS_LABEL[v] || VIS_LABEL.private;
+    visBtn.title = `Click to make ${VIS_NEXT[v] || 'shared'}`;
   }
   refreshVisBtn();
   visBtn.addEventListener('click', async () => {
     const current = docs[name] ? docs[name].visibility : initialVisibility;
-    const next = current === 'public' ? 'private' : 'public';
+    const next = VIS_NEXT[current] || 'shared';
     await dbSetVisibility(name, next);
     print(`"${name}" is now ${next}.`, 'success');
   });

@@ -12,6 +12,7 @@ const HELP_SECTIONS = [
       ['list public',                    'all public docs'],
       ['list mywork',                    'all your docs'],
       ['list private',                   'your private docs only'],
+      ['list shared',                    'your + friends’ shared docs'],
       ['list close',                     'close the list sidebar'],
       ['hash &lt;index&gt;',                'print the hash of a document'],
     ]
@@ -30,6 +31,8 @@ const HELP_SECTIONS = [
     entries: [
       ['publish -h &lt;hash&gt;',   'make a document public by hash'],
       ['publish -i &lt;index&gt;',  'make a document public by list index'],
+      ['share -h &lt;hash&gt;',     'share with your friends by hash'],
+      ['share -i &lt;index&gt;',    'share with your friends by list index'],
       ['unpublish -h &lt;hash&gt;',  'make a document private by hash'],
       ['unpublish -i &lt;index&gt;', 'make a document private by list index'],
     ]
@@ -97,7 +100,9 @@ function buildDocEntry(doc, isMine, index) {
   const displayTitle = title ? `<code>${title}</code>` : `<code>&lt;untitled&gt;</code>`;
   const indexStr = index != null ? `<span style="color:#556677">${index}.</span> ` : '';
   const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
-  const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
+  const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>'
+            : visibility === 'shared' ? ' <span style="color:#88ff88">[shared]</span>'
+            : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
   const authorId = !isMine && author_name ? '<br><span style="color:#556677;font-size:0.85em">add: friend ' + author_name + '</span>' : '';
   const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
@@ -213,6 +218,34 @@ async function openListSidebar(filter) {
     title = 'Private Documents';
     lastListedDocs = data || [];
     html = buildListHTML(lastListedDocs, title, true);
+  } else if (filter === 'shared') {
+    // Your shared docs + your friends' shared docs.
+    let all = [];
+    try {
+      const mine = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'shared').orderBy('updated_at', 'desc').get());
+      // Collect friend uids, then fetch their shared docs (chunked — `in` allows 10).
+      const fsnap = await _db.collection('friendships').where('users', 'array-contains', currentUser.uid).get();
+      const friendUids = fsnap.docs.map(d => (d.data().users || []).find(u => u !== currentUser.uid)).filter(Boolean);
+      const friendsShared = [];
+      for (let i = 0; i < friendUids.length; i += 10) {
+        const chunk = friendUids.slice(i, i + 10);
+        const snap = await col.where('user_id', 'in', chunk).where('visibility', '==', 'shared').orderBy('updated_at', 'desc').get();
+        friendsShared.push(...toData(snap));
+      }
+      all = [...mine, ...friendsShared].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
+    title = 'Shared Documents';
+    lastListedDocs = all;
+    if (all.length === 0) {
+      html = `<div class="help-section"><div class="help-section-title">${title}</div><div class="help-entry"><span>No shared documents.</span></div></div>`;
+    } else {
+      html = `
+        <div class="help-section">
+          <div class="help-section-title">${title} (${all.length})</div>
+          ${all.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.uid, i + 1)).join('')}
+        </div>
+      `;
+    }
   } else {
     // Default: all public + current user's private, sorted newest first
     let myPrivate, allPublic;

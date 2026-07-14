@@ -94,7 +94,10 @@ const COMMANDS = {
       const snap = await _db.collection('documents').doc(entry.filename).get();
       data = snap.exists ? snap.data() : null;
     } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    if (!data || data.user_id !== entry.user_id || (!isMine && data.visibility !== 'public')) {
+    // Foreign docs are viewable only when public or shared-with-us; the get()
+    // above is the real gate (rules deny a shared doc unless we're friends).
+    if (!data || data.user_id !== entry.user_id
+        || (!isMine && data.visibility !== 'public' && data.visibility !== 'shared')) {
       print(`Error: document not found.`, 'error'); return;
     }
     openDocument(key, data.content, data.visibility, data.title || '', 'preview', !isMine, data.tags || []);
@@ -223,6 +226,20 @@ const COMMANDS = {
     if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
     await dbSetVisibility(name, 'public');
     print(`"${name}" is now public.`, 'success');
+  },
+
+  async share(args) {
+    if (!requireLogin()) return;
+    const parts = args.trim().split(/\s+/);
+    const flag = parts[0];
+    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
+      print('Usage: share -h <hash>  |  share -i <index>', 'error'); return;
+    }
+    const name = resolveDocRef(flag, parts[1]);
+    if (!name) return;
+    if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
+    await dbSetVisibility(name, 'shared');
+    print(`"${name}" is now shared with your friends.`, 'success');
   },
 
   async unpublish(args) {

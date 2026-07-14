@@ -82,6 +82,7 @@ async function sendDirectMessage(username, text) {
       from_uid: currentUser.uid,
       from_name: myName(),
       to_uid: target.uid,
+      to_name: target.username,
       type: 'text',
       text,
       status: 'none',
@@ -176,6 +177,13 @@ async function openMessagesSidebar() {
     });
     if (dirty) await batch.commit();
 
+    // Direct messages this user has sent (friend requests are excluded).
+    const sentSnap = await _db.collection('messages').where('from_uid', '==', currentUser.uid).get();
+    const sent = sentSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(m => m.type === 'text')
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
     const friendsSnap = await _db.collection('friendships').where('users', 'array-contains', currentUser.uid).get();
     const friends = friendsSnap.docs.map(d => {
       const f = d.data();
@@ -184,14 +192,14 @@ async function openMessagesSidebar() {
       return { uid: otherUid, name };
     });
 
-    swapSidebarContent(buildMessagesHTML(inbox, friends), 'messages', 'Messages');
+    swapSidebarContent(buildMessagesHTML(inbox, sent, friends), 'messages', 'Messages');
     print('Messages opened on the right.', 'muted');
   } catch (e) {
     print(`Error: ${e.message}`, 'error');
   }
 }
 
-function buildMessagesHTML(inbox, friends) {
+function buildMessagesHTML(inbox, sent, friends) {
   const requests = inbox.filter(m => m.type === 'friend_request' && m.status === 'pending');
   const others = inbox.filter(m => m.type === 'text' || m.type === 'friend_accept');
 
@@ -230,6 +238,17 @@ function buildMessagesHTML(inbox, friends) {
       }).join('') : `<div class="help-entry"><span>No messages.</span></div>`}
     </div>`;
 
+  const sentSection = `
+    <div class="help-section">
+      <div class="help-section-title">Sent${sent.length ? ` (${sent.length})` : ''}</div>
+      ${sent.length ? sent.map(m => `
+        <div class="help-entry">
+          <code>to ${escapeHtml(m.to_name || '(user)')}</code><br>
+          <span>${escapeHtml(m.text)}</span><br>
+          <span style="color:#556677;font-size:0.85em">${formatTimeAgo(m.created_at)}</span>
+        </div>`).join('') : `<div class="help-entry"><span>No sent messages.</span></div>`}
+    </div>`;
+
   const friendsSection = `
     <div class="help-section">
       <div class="help-section-title">Friends${friends.length ? ` (${friends.length})` : ''}</div>
@@ -238,5 +257,5 @@ function buildMessagesHTML(inbox, friends) {
         : `<div class="help-entry"><span>No friends yet. Try  friend &lt;username&gt;</span></div>`}
     </div>`;
 
-  return youSection + reqSection + msgSection + friendsSection;
+  return youSection + reqSection + msgSection + sentSection + friendsSection;
 }

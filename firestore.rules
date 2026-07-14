@@ -8,11 +8,22 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == 'BqXArSXr1pWbYkAo5FTCzDPFESH2';
     }
 
+    // Two users are friends if a friendship doc exists for their pair. The doc id
+    // is the two uids sorted and joined with '_', so check both orderings.
+    function areFriends(a, b) {
+      return exists(/databases/$(database)/documents/friendships/$(a + '_' + b))
+          || exists(/databases/$(database)/documents/friendships/$(b + '_' + a));
+    }
+
     // Documents are keyed by their filename (a 256-bit random hex id).
     match /documents/{filename} {
-      // Public docs: anyone. Private docs: the owner. Admin: everything.
+      // Public docs: anyone. Shared docs: the owner's friends. Private docs: the
+      // owner only. Admin: everything.
       allow read: if resource.data.visibility == 'public'
                   || (request.auth != null && request.auth.uid == resource.data.user_id)
+                  || (resource.data.visibility == 'shared'
+                      && request.auth != null
+                      && areFriends(request.auth.uid, resource.data.user_id))
                   || isAdmin();
 
       // A user may only create docs they own.
