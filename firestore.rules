@@ -66,7 +66,10 @@ service cloud.firestore {
     // with '_'. A single shared doc keeps friendship symmetric while still
     // satisfying per-user write rules (the accepter creates it with both uids).
     match /friendships/{pairId} {
-      allow read:   if request.auth != null && request.auth.uid in resource.data.users;
+      // `resource == null` allows a get() of a not-yet-existing pair doc (used to
+      // check "are we already friends?") — it simply returns "does not exist".
+      allow read:   if request.auth != null
+                    && (resource == null || request.auth.uid in resource.data.users);
       allow create: if request.auth != null
                     && request.auth.uid in request.resource.data.users
                     && request.resource.data.users.size() == 2;
@@ -85,9 +88,12 @@ service cloud.firestore {
       // You may only claim a name that maps to yourself, and only while it is
       // free (create fails when the doc exists, and updates are forbidden), so
       // usernames stay unique and can't be hijacked.
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      // A user claims their own name; the admin may backfill mappings for
+      // existing accounts (uid points at the account, not the admin).
+      allow create: if (request.auth != null && request.resource.data.uid == request.auth.uid)
+                    || isAdmin();
       allow update: if false;
-      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
     }
 
     // Invitation codes are looked up by id during registration (before sign-in),

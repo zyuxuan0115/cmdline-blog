@@ -162,6 +162,7 @@
     <div class="top-bar">
       <h1>Admin Dashboard</h1>
       <div>
+        <button class="btn" id="backfill-btn" title="Create username→uid lookup docs for existing accounts">Backfill usernames</button>
         <a class="btn" href="index.html" id="logout-btn">Logout</a>
       </div>
     </div>
@@ -221,6 +222,43 @@
     document.getElementById('logout-btn').addEventListener('click', async () => {
       sessionStorage.removeItem('admin_ok');
       await _auth.signOut();
+    });
+
+    // One-time (idempotent) backfill: create a usernames/<lowercase> → uid lookup
+    // doc for every existing account so users can be addressed by  friend <username>.
+    document.getElementById('backfill-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('backfill-btn');
+      btn.disabled = true;
+      statusEl.classList.remove('error');
+      statusEl.textContent = 'Backfilling usernames…';
+      let created = 0, skipped = 0, conflicts = 0, errors = 0;
+      try {
+        const snap = await _db.collection('users').get();
+        for (const d of snap.docs) {
+          const u = d.data();
+          const uid = u.uid || d.id;
+          const username = u.username;
+          if (!username) { skipped++; continue; }
+          const ref = _db.collection('usernames').doc(username.toLowerCase());
+          try {
+            const existing = await ref.get();
+            if (existing.exists) {
+              // Already mapped — count as a conflict only if it points elsewhere.
+              if (existing.data().uid !== uid) conflicts++; else skipped++;
+              continue;
+            }
+            await ref.set({ uid, username });
+            created++;
+          } catch (e) { errors++; }
+        }
+        statusEl.textContent =
+          `Backfill done — created ${created}, already mapped ${skipped}, name conflicts ${conflicts}, errors ${errors}.`;
+      } catch (e) {
+        statusEl.classList.add('error');
+        statusEl.textContent = `Backfill failed: ${e.message}`;
+      } finally {
+        btn.disabled = false;
+      }
     });
 
     const PAGE_SIZE = 50;
