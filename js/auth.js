@@ -96,6 +96,7 @@ async function authWhoami() {
   if (!user) { print('Not logged in.', 'muted'); return; }
   const username = user.displayName || user.email;
   print(`Logged in as: ${username} (${user.email})`, 'info');
+  print(`Your user id: ${user.uid}`, 'muted');
 }
 
 function authUnregister() {

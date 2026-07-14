@@ -37,6 +37,43 @@ service cloud.firestore {
       allow delete: if (request.auth != null && request.auth.uid == uid) || isAdmin();
     }
 
+    // Direct messages, including friend requests and their accept notifications.
+    match /messages/{msgId} {
+      // Sender and recipient may read a message.
+      allow read: if request.auth != null
+                  && (resource.data.to_uid == request.auth.uid
+                      || resource.data.from_uid == request.auth.uid);
+
+      // A user may only send messages authored by themselves, to someone else.
+      allow create: if request.auth != null
+                    && request.resource.data.from_uid == request.auth.uid
+                    && request.resource.data.to_uid is string
+                    && request.resource.data.to_uid != request.auth.uid;
+
+      // Only the recipient may change a message (accept/ignore, mark read).
+      allow update: if request.auth != null
+                    && resource.data.to_uid == request.auth.uid
+                    && request.resource.data.to_uid == resource.data.to_uid
+                    && request.resource.data.from_uid == resource.data.from_uid;
+
+      // Either party may remove a message from their view.
+      allow delete: if request.auth != null
+                    && (resource.data.to_uid == request.auth.uid
+                        || resource.data.from_uid == request.auth.uid);
+    }
+
+    // Friendships — one document per pair, id is the two uids sorted and joined
+    // with '_'. A single shared doc keeps friendship symmetric while still
+    // satisfying per-user write rules (the accepter creates it with both uids).
+    match /friendships/{pairId} {
+      allow read:   if request.auth != null && request.auth.uid in resource.data.users;
+      allow create: if request.auth != null
+                    && request.auth.uid in request.resource.data.users
+                    && request.resource.data.users.size() == 2;
+      allow delete: if request.auth != null && request.auth.uid in resource.data.users;
+      allow update: if false;
+    }
+
     // Invitation codes are looked up by id during registration (before sign-in),
     // so a direct get() must be allowed — but listing/enumeration is not.
     match /invitation_codes/{code} {

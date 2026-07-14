@@ -45,6 +45,15 @@ const HELP_SECTIONS = [
     ]
   },
   {
+    title: 'Social',
+    entries: [
+      ['friend &lt;user_id&gt;',        'send a friend request'],
+      ['message &lt;user_id&gt; &lt;text&gt;', 'send a direct message'],
+      ['messages',                       'open your inbox / friends'],
+      ['messages close',                 'close the messages sidebar'],
+    ]
+  },
+  {
     title: 'Terminal',
     entries: [
       ['clear',      'clear terminal output'],
@@ -60,7 +69,7 @@ const HOTKEYS = [
   ['Ctrl + `', 'toggle focus between terminal and document window'],
   ['Ctrl + 1', 'focus the next document window'],
   ['Ctrl + X', 'close the current window (or return to terminal)'],
-  ['Ctrl + Z', 'close the list / commands / shortcuts sidebar'],
+  ['Ctrl + Z', 'toggle (close / reopen) the sidebar'],
   ['↑ / ↓',    'browse command history'],
 ];
 
@@ -70,6 +79,7 @@ const sidebarTitle = document.getElementById('help-sidebar-title');
 let currentSidebarView = null; // 'help', 'list', or 'hotkeys'
 let lastListedDocs = []; // docs from the most recent  list  command, in display order
 let lastListFilter = ''; // '', 'public', 'mywork', or 'private'
+let lastSidebarView = null; // last view shown before it was closed, for Ctrl+Z reopen
 
 function buildHelpHTML() {
   return HELP_SECTIONS.map(section => `
@@ -83,16 +93,17 @@ function buildHelpHTML() {
 }
 
 function buildDocEntry(doc, isMine, index) {
-  const { filename, title, visibility, tags, updated_at, author_name } = doc;
+  const { filename, title, visibility, tags, updated_at, author_name, user_id } = doc;
   const displayTitle = title ? `<code>${title}</code>` : `<code>&lt;untitled&gt;</code>`;
   const indexStr = index != null ? `<span style="color:#556677">${index}.</span> ` : '';
   const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
   const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>' : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
+  const authorId = !isMine && user_id ? '<br><span style="color:#556677;font-size:0.85em">id: ' + user_id + ' — friend ' + user_id + '</span>' : '';
   const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
   const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
   const clickAttr = index != null ? ` style="cursor:pointer" onclick="runCommand('open ${index}')"` : '';
-  return `<div class="help-entry"${clickAttr}>${indexStr}${displayTitle}${open}${vis}${author}${tagStr}${timeStr}</div>`;
+  return `<div class="help-entry"${clickAttr}>${indexStr}${displayTitle}${open}${vis}${author}${tagStr}${timeStr}${authorId}</div>`;
 }
 
 function buildListHTML(documents, sectionTitle, isMine) {
@@ -154,8 +165,18 @@ function openHelpSidebar() {
 }
 
 function closeHelpSidebar() {
+  if (currentSidebarView) lastSidebarView = currentSidebarView; // remember for Ctrl+Z reopen
   helpSidebar.classList.remove('open');
   currentSidebarView = null;
+}
+
+// Reopen the sidebar view that was last closed (used by Ctrl+Z).
+function reopenSidebar() {
+  if (lastSidebarView === 'help')    { openHelpSidebar();    return true; }
+  if (lastSidebarView === 'hotkeys') { openHotkeysSidebar(); return true; }
+  if (lastSidebarView === 'list')    { openListSidebar(lastListFilter); return true; }
+  if (lastSidebarView === 'messages') { openMessagesSidebar(); return true; }
+  return false;
 }
 
 async function openListSidebar(filter) {

@@ -219,6 +219,24 @@ input, textarea, button, select {
   color: #556677;
 }
 
+/* Accept / ignore buttons in the Messages sidebar */
+.msg-btn {
+  margin: 6px 6px 0 0;
+  padding: 3px 10px;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #00000080;
+  background: #1f1f3a;
+  color: #aabbcc;
+  cursor: pointer;
+  font-family: 'Cubic 11', monospace;
+  font-size: 9px;
+  line-height: 1;
+}
+.msg-btn.accept { border-color: #88ff88; color: #88ff88; }
+.msg-btn.ignore { border-color: #ff8a8a; color: #ff8a8a; }
+.msg-btn:hover { background: #2f2f55; }
+.msg-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+
 /* ============== Terminal Panel ============== */
 #terminal-panel {
   position: relative;

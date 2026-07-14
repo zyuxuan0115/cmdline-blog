@@ -245,6 +245,22 @@ const COMMANDS = {
   whoami() { authWhoami(); },
   unregister() { authUnregister(); },
 
+  friend(args) { sendFriendRequest(args); },
+
+  message(args) {
+    const trimmed = args.trim();
+    const sp = trimmed.indexOf(' ');
+    if (sp === -1) { print('Usage: message <user_id> <text>', 'error'); return; }
+    sendDirectMessage(trimmed.slice(0, sp), trimmed.slice(sp + 1));
+  },
+  msg(args) { COMMANDS.message(args); },
+
+  messages(args) {
+    if (args.trim() === 'close') { closeHelpSidebar(); return; }
+    openMessagesSidebar();
+  },
+  inbox(args) { COMMANDS.messages(args); },
+
   hotkeys(args) {
     if (args.trim() === 'close') {
       closeHelpSidebar();
@@ -382,13 +398,19 @@ document.addEventListener('keydown', e => {
   else input.focus();
 });
 
-// Ctrl+Z close the list / commands / shortcuts sidebar (if one is open).
+// Ctrl+Z toggle the list / commands / shortcuts sidebar: close it if open,
+// otherwise reopen the view that was last closed.
 document.addEventListener('keydown', e => {
   if (!(e.ctrlKey && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ'))) return;
-  if (!helpSidebar.classList.contains('open')) return;   // nothing open → let default undo proceed
-  e.preventDefault();
-  e.stopPropagation();
-  closeHelpSidebar();
+  if (helpSidebar.classList.contains('open')) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeHelpSidebar();
+  } else if (reopenSidebar()) {   // reopened a previously closed sidebar
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  // else: nothing to toggle → let the default undo proceed
 });
 
 // Ctrl+1 cycle focus to the next document window
