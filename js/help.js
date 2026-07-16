@@ -184,6 +184,25 @@ function reopenSidebar() {
   return false;
 }
 
+// Shared documents owned by the current user's friends (chunked — `in` allows 10 uids).
+// Resilient: on error it warns and returns [], so it can't break the whole list.
+async function fetchFriendsSharedDocs() {
+  try {
+    const fsnap = await _db.collection('friendships').where('users', 'array-contains', currentUser.uid).get();
+    const friendUids = fsnap.docs.map(d => (d.data().users || []).find(u => u !== currentUser.uid)).filter(Boolean);
+    const out = [];
+    for (let i = 0; i < friendUids.length; i += 10) {
+      const chunk = friendUids.slice(i, i + 10);
+      const snap = await _db.collection('documents').where('user_id', 'in', chunk).where('visibility', '==', 'shared').orderBy('updated_at', 'desc').get();
+      out.push(...snap.docs.map(d => d.data()));
+    }
+    return out;
+  } catch (e) {
+    print(`Note: couldn't load friends' shared docs (${e.message}).`, 'muted');
+    return [];
+  }
+}
+
 async function openListSidebar(filter) {
   lastListFilter = filter;
   const fields = 'filename, title, visibility, tags, updated_at, author_name, user_id';
@@ -223,15 +242,7 @@ async function openListSidebar(filter) {
     let all = [];
     try {
       const mine = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'shared').orderBy('updated_at', 'desc').get());
-      // Collect friend uids, then fetch their shared docs (chunked — `in` allows 10).
-      const fsnap = await _db.collection('friendships').where('users', 'array-contains', currentUser.uid).get();
-      const friendUids = fsnap.docs.map(d => (d.data().users || []).find(u => u !== currentUser.uid)).filter(Boolean);
-      const friendsShared = [];
-      for (let i = 0; i < friendUids.length; i += 10) {
-        const chunk = friendUids.slice(i, i + 10);
-        const snap = await col.where('user_id', 'in', chunk).where('visibility', '==', 'shared').orderBy('updated_at', 'desc').get();
-        friendsShared.push(...toData(snap));
-      }
+      const friendsShared = await fetchFriendsSharedDocs();
       all = [...mine, ...friendsShared].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
     } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     title = 'Shared Documents';
@@ -247,14 +258,19 @@ async function openListSidebar(filter) {
       `;
     }
   } else {
-    // Default: all public + current user's private, sorted newest first
-    let myPrivate, allPublic;
+    // Default: everything the user can see — all their own docs (any visibility),
+    // every public doc, and friends' shared docs. Sorted newest first.
+    let myDocs, allPublic, friendsShared;
     try {
-      myPrivate = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'private').orderBy('updated_at', 'desc').get());
+      myDocs = toData(await col.where('user_id', '==', currentUser.uid).orderBy('updated_at', 'desc').get());
       allPublic = toData(await col.where('visibility', '==', 'public').orderBy('updated_at', 'desc').get());
+      friendsShared = await fetchFriendsSharedDocs();
     } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    // Merge and sort by updated_at descending
-    const all = [...myPrivate, ...allPublic].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    // Merge, de-duplicate by filename (own public docs also appear in allPublic),
+    // and sort by updated_at descending.
+    const byName = new Map();
+    [...myDocs, ...allPublic, ...friendsShared].forEach(d => { if (d && d.filename) byName.set(d.filename, d); });
+    const all = [...byName.values()].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
     title = 'All Documents';
     lastListedDocs = all;
     html = buildListHTML(all, title, false).replace(
