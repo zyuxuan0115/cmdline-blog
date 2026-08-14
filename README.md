@@ -6,9 +6,13 @@ A web-based markdown document editor with a retro terminal interface and animate
 
 ```
 ├── index.html          Main HTML entry point
+├── blog.html           Plain blog reader for one user's posts (blog <username>)
 ├── style.css           Styling
+├── blog.css            Styling for the blog reader (normal, non-pixel type)
 ├── package.json        Project metadata
 ├── js/
+│   ├── firebase-config.js  Firebase project config, shared by both pages
+│   ├── blog.js         Blog reader page logic
 │   ├── state.js        Supabase client, shared state, print(), updatePrompt()
 │   ├── db.js           Database helpers (tags, visibility, file existence)
 │   ├── helpers.js      UI utilities (makeTL, makeBtn, makeDraggable, makeResizable)
@@ -35,6 +39,8 @@ A web-based markdown document editor with a retro terminal interface and animate
 | `open <filename>` | Open / focus a document |
 | `close <filename>` | Close a document window |
 | `list` | List all your documents |
+| `blog <username>` | Open that user's published posts as a normal blog page, in a new tab |
+| `blog` | Open your own blog page |
 | `tag <hash> <tag>` | Add a tag |
 | `untag <hash> <tag>` | Remove a tag |
 | `tags [tag]` | List tags or files under a tag |

@@ -42,16 +42,7 @@ function updatePrompt(email) {
 // Initialised after the terminal essentials above, and guarded, so that a
 // Firebase/CDN failure can't take the whole terminal down — it surfaces as a
 // visible error instead of a dead input box.
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDxos4vkR1hDYyiBZ5W1qtpM4Z48bKDyh8",
-  authDomain: "cmdline-blog.firebaseapp.com",
-  projectId: "cmdline-blog",
-  storageBucket: "cmdline-blog.firebasestorage.app",
-  messagingSenderId: "785251107809",
-  appId: "1:785251107809:web:d5d10194c7b0538a1688a0",
-  measurementId: "G-3XTR15LEPT"
-};
+// `firebaseConfig` comes from js/firebase-config.js, loaded before this file.
 
 let _auth, _db, _functions;
 try {

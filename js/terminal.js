@@ -161,6 +161,20 @@ const COMMANDS = {
     print(lastListedDocs[idx - 1].filename, 'info');
   },
 
+  // Open a user's published posts in the plain-text blog reader (blog.html),
+  // in a new tab so the terminal session is left alone. With no username it
+  // opens your own blog.
+  blog(args) {
+    const name = args.trim().replace(/^@/, '') || (currentUser && currentUser.displayName) || '';
+    if (!name) { print('Usage: blog <username>', 'error'); return; }
+    const url = `blog.html?u=${encodeURIComponent(name)}`;
+    if (window.open(url, '_blank')) {
+      print(`Opened ${name}'s blog in a new tab.`, 'success');
+    } else {
+      print(`Popup blocked — open this manually: ${url}`, 'error');
+    }
+  },
+
   async tag(args) {
     if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);

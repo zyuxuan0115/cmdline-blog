@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="blog.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <a class="back-link" href="index.html">&larr; back to the terminal</a>
+      <h1 id="blog-author">&nbsp;</h1>
+      <p id="blog-sub" class="site-sub"></p>
+    </header>
+
+    <main id="blog-main">
+      <p class="status">Loading…</p>
+    </main>
+
+    <footer class="site-footer">
+      <span>CmdLine Blog</span>
+      <a href="https://github.com/zyuxuan0115/cmdline-blog" target="_blank" rel="noopener">source</a>
+    </footer>
+  </div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/blog.js"></script>
+</body>
+</html>

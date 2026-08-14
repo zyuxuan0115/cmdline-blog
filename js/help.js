@@ -15,6 +15,8 @@ const HELP_SECTIONS = [
       ['list shared',                    'your + friends’ shared docs'],
       ['list close',                     'close the list sidebar'],
       ['hash &lt;index&gt;',                'print the hash of a document'],
+      ['blog &lt;username&gt;',            'read a user’s published posts in a new tab'],
+      ['blog',                           'read your own published posts'],
     ]
   },
   {
