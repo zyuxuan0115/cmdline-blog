@@ -75,26 +75,11 @@ function postUrl(doc) {
   return `?u=${encodeURIComponent(username || doc.author_name || '')}&p=${encodeURIComponent(doc.filename)}`;
 }
 
-// A rough plain-text lead-in for the index page.
-function excerptOf(content) {
-  const text = String(content || '')
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/^\s{0,3}[#>]+\s*/gm, '')
-    .replace(/[*_`~]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return text.length > 240 ? text.slice(0, 240).trimEnd() + '…' : text;
-}
-
-function tagsHtml(tags) {
-  if (!tags || !tags.length) return '';
-  return `<span class="dot">·</span><span class="tag">${tags.map(t => `#${escapeHtml(t)}`).join(' ')}</span>`;
-}
-
-function sharedBadge(doc) {
-  return doc.visibility === 'shared' ? ' <span class="badge">friends only</span>' : '';
+function tagsHtml(doc) {
+  const tags = (doc.tags || []).map(t => `#${escapeHtml(t)}`).join(' ');
+  const badge = doc.visibility === 'shared' ? '<span class="badge">friends only</span>' : '';
+  if (!tags && !badge) return '';
+  return `<div class="post-tags">${[tags, badge].filter(Boolean).join(' · ')}</div>`;
 }
 
 function showError(msg) {
@@ -163,16 +148,24 @@ function renderIndex(author, posts) {
     return;
   }
 
+  // Each entry shows its whole post, under the date it was written — the date
+  // doubles as the permalink.
   mainEl.innerHTML = posts.map(doc => {
-    const excerpt = excerptOf(doc.content);
+    const url = escapeHtml(postUrl(doc));
+    const date = postDate(doc);
     return `
-      <article class="post-card">
-        <h2><a href="${escapeHtml(postUrl(doc))}">${escapeHtml(postTitle(doc))}</a></h2>
-        <div class="post-meta">${escapeHtml(postDate(doc))}${tagsHtml(doc.tags)}${sharedBadge(doc)}</div>
-        ${excerpt ? `<p class="post-excerpt">${escapeHtml(excerpt)}</p>` : ''}
-        <a class="read-more" href="${escapeHtml(postUrl(doc))}">Read more →</a>
+      <article class="post">
+        ${date ? `<h2 class="post-date"><a href="${url}">${escapeHtml(date)}</a></h2>` : ''}
+        ${doc.title ? `<h3 class="post-title"><a href="${url}">${escapeHtml(doc.title)}</a></h3>` : ''}
+        <div class="post-body"></div>
+        ${tagsHtml(doc)}
       </article>`;
   }).join('');
+
+  mainEl.querySelectorAll('.post-body').forEach((body, i) => {
+    body.innerHTML = renderMarkdown(posts[i].content);
+    rewriteDocLinks(body);
+  });
 }
 
 function renderPost(doc) {
@@ -182,17 +175,17 @@ function renderPost(doc) {
   authorEl.textContent = author;
   subEl.innerHTML = `<a href="?u=${encodeURIComponent(username || author)}">All posts</a>`;
 
+  const date = postDate(doc);
   mainEl.innerHTML = `
-    <article>
-      <header class="post-header">
-        <h1>${escapeHtml(title)}</h1>
-        <div class="post-meta">${escapeHtml(postDate(doc))}${tagsHtml(doc.tags)}${sharedBadge(doc)}</div>
-      </header>
+    <article class="post">
+      ${date ? `<h2 class="post-date">${escapeHtml(date)}</h2>` : ''}
+      ${doc.title ? `<h3 class="post-title">${escapeHtml(title)}</h3>` : ''}
       <div class="post-body"></div>
-      <nav class="post-nav">
-        <a href="?u=${encodeURIComponent(username || author)}">← All posts by ${escapeHtml(author)}</a>
-      </nav>
-    </article>`;
+      ${tagsHtml(doc)}
+    </article>
+    <nav class="post-nav">
+      <a href="?u=${encodeURIComponent(username || author)}">← All posts by ${escapeHtml(author)}</a>
+    </nav>`;
 
   const body = mainEl.querySelector('.post-body');
   body.innerHTML = renderMarkdown(doc.content);
