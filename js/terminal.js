@@ -356,12 +356,11 @@ input.addEventListener('keydown', e => {
 // Move focus into a document window; switch owned preview docs to edit mode.
 function focusIntoWindow(win) {
   focusWindow(win);
-  const editor = win.querySelector('textarea.doc-editor');
-  const inPreview = !editor || editor.style.display === 'none';
+  const inPreview = !win._isPreview || win._isPreview();
   if (inPreview && win._switchToEdit) {
     win._switchToEdit();       // owned doc in preview → edit (focuses the editor)
-  } else if (editor && editor.style.display !== 'none') {
-    editor.focus();            // already in edit mode
+  } else if (!inPreview) {
+    win._focusEditor();        // already in edit mode
   } else {
     win.focus();               // read-only doc → keep preview, focus the window
   }
@@ -397,8 +396,7 @@ document.addEventListener('keydown', e => {
     // flip it to edit mode; otherwise toggle back to the terminal.
     const win = (active && active.closest('.doc-window'))
       || document.querySelector('.doc-window.focused');
-    const editor = win && win.querySelector('textarea.doc-editor');
-    if (win && win._switchToEdit && editor && editor.style.display === 'none') {
+    if (win && win._switchToEdit && win._isPreview()) {
       win._switchToEdit();
     } else {
       input.focus();
@@ -458,10 +456,7 @@ document.addEventListener('keydown', e => {
     const next = wins[(idx + 1) % wins.length];
 
     focusWindow(next);
-    const editor = next.querySelector('textarea.doc-editor');
-    if (editor && editor.style.display !== 'none') {
-      editor.focus();
-    }
+    if (next._focusEditor) next._focusEditor();
   }
 });
 

@@ -20,6 +20,23 @@ const HELP_SECTIONS = [
     ]
   },
   {
+    title: 'Editor (vim)',
+    entries: [
+      ['i / a / o',                      'insert before / after cursor, or on a new line'],
+      ['Esc',                            'back to normal mode'],
+      ['h j k l · w b · 0 $ · gg G',     'motions — prefix with a count, e.g. 3j'],
+      ['dd · yy · p · x',                'delete line, yank line, paste, delete char'],
+      ['dw · ciw · d$',                  'operator + motion / text object'],
+      ['v · V · Ctrl+V',                 'visual, visual line, visual block'],
+      ['u · Ctrl+R',                     'undo / redo'],
+      ['/text · n · N',                  'search, next / previous match'],
+      [':s/old/new/g',                   'substitute on the current line'],
+      [':w · :q · :wq · :x',             'save · close window · save and close'],
+      [':pre',                           'switch this window to preview'],
+      ['VIM button',                     'turn modal editing on / off everywhere'],
+    ]
+  },
+  {
     title: 'Tags',
     entries: [
       ['tag -h &lt;hash&gt; &lt;tag&gt;',   'add a tag by hash'],

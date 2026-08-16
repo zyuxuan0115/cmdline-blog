@@ -18,6 +18,7 @@ A web-based markdown document editor with a retro terminal interface and animate
 │   ├── helpers.js      UI utilities (makeTL, makeBtn, makeDraggable, makeResizable)
 │   ├── auth.js         User registration, login, logout, unregister, whoami
 │   ├── help.js         Help sidebar content and toggle
+│   ├── vim-editor.js   CodeMirror + vim keymap adapter used by every editor
 │   ├── documents.js    Document window management and buildWindow()
 │   ├── terminal.js     Command definitions and terminal input handling
 │   ├── resize.js       Terminal panel resize handle
@@ -49,6 +50,34 @@ A web-based markdown document editor with a retro terminal interface and animate
 | `clear` | Clear terminal output |
 | `help` | Open help sidebar |
 | `help close` | Close help sidebar |
+
+## Editing (vim)
+
+Every document window edits through CodeMirror running its vim keymap, so the
+usual modal editing works: modes, counts, motions, operators, text objects,
+registers, macros, marks, `/` search and `:` ex commands.
+
+| Keys | Description |
+|------|-------------|
+| `i` `a` `o` | Insert before / after the cursor, or on a new line |
+| `Esc` | Back to normal mode |
+| `h j k l`, `w b`, `0 $`, `gg G` | Motions — prefix with a count, e.g. `3j` |
+| `dd` `yy` `p` `x` | Delete line, yank line, paste, delete character |
+| `dw` `ciw` `d$` | Operator + motion or text object |
+| `v` `V` `Ctrl+V` | Visual, visual line, visual block |
+| `u` `Ctrl+R` | Undo / redo |
+| `/text` `n` `N` | Search, next / previous match |
+| `:s/old/new/g` | Substitute on the current line |
+| `:w` | Save now |
+| `:q` | Close the window |
+| `:wq` / `:x` | Save and close |
+| `:pre[view]` | Switch the window to preview |
+
+The current mode shows next to the toolbar's **VIM** button; that button turns
+modal editing off (or back on) for every open window and remembers the choice.
+`Ctrl+X` stays the app's "close window" hotkey, so vim's decrement is unmapped.
+If the CodeMirror CDN is unreachable the window falls back to a plain textarea,
+so documents stay editable either way.
 
 ## Invitation Code
 

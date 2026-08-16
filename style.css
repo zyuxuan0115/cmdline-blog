@@ -581,6 +581,81 @@ input, textarea, button, select {
 .doc-editor::-webkit-scrollbar-track { background: #2a2a4a; }
 .doc-editor::-webkit-scrollbar-thumb { background: #ffadd6; border: 1px solid #000; }
 
+/* CodeMirror (the vim editor) wears the same clothes as .doc-editor */
+.doc-content .CodeMirror {
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  padding: 16px 0 16px 16px;
+  font-family: 'Cubic 11', monospace;
+  font-size: 10px;
+  line-height: 1.9;
+  color: #f8f8f8;
+  background:
+    repeating-linear-gradient(
+      transparent 0 23px,
+      rgba(255, 173, 214, 0.06) 23px 24px
+    ),
+    #0a0a1e;
+}
+
+.CodeMirror-lines { padding: 0; }
+.CodeMirror pre.CodeMirror-line,
+.CodeMirror pre.CodeMirror-line-like { padding: 0; }
+.CodeMirror-selected { background: #5a2d4d; }
+.CodeMirror-focused .CodeMirror-selected { background: #7a3d6d; }
+.CodeMirror-line::selection,
+.CodeMirror-line > span::selection { background: #7a3d6d; }
+
+/* Insert mode: a thin caret. Normal / visual: vim's block cursor. */
+.CodeMirror-cursor { border-left: 2px solid #ff69b4; }
+.cm-fat-cursor .CodeMirror-cursor,
+.CodeMirror-cursor.CodeMirror-overwrite {
+  background: rgba(255, 105, 180, 0.55);
+  border: 0;
+}
+.cm-animate-fat-cursor {
+  animation: none;
+  background: rgba(255, 105, 180, 0.55);
+}
+.cm-fat-cursor .CodeMirror-line::selection,
+.cm-fat-cursor .CodeMirror-line > span::selection { background: #7a3d6d; }
+
+.CodeMirror-matchingbracket { color: #ffe066 !important; text-decoration: none; }
+.cm-searching { background: #ffe066; color: #000; }
+
+.CodeMirror-vscrollbar::-webkit-scrollbar { width: 8px; }
+.CodeMirror-vscrollbar::-webkit-scrollbar-track { background: #2a2a4a; }
+.CodeMirror-vscrollbar::-webkit-scrollbar-thumb { background: #ffadd6; border: 1px solid #000; }
+
+/* The `:` / `/` command line vim opens at the top of the editor */
+.CodeMirror-dialog {
+  padding: 5px 10px;
+  background: #1a1a3a;
+  border-bottom: 2px solid #5a2d4d;
+  color: #f8f8f8;
+  font-family: 'Cubic 11', monospace;
+  font-size: 10px;
+}
+
+.CodeMirror-dialog input {
+  font-family: 'Cubic 11', monospace;
+  font-size: 10px;
+  color: #ffadd6;
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: #ff69b4;
+}
+
+/* Current vim mode, shown in the toolbar */
+.vim-mode {
+  font-size: 8px;
+  color: #ffadd6;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
 .doc-preview {
   flex: 1;
   padding: 18px;

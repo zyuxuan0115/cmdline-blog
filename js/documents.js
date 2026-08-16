@@ -5,6 +5,8 @@ function openDocument(name, content = '', visibility = 'private', title = '', in
   container.appendChild(win);
   docs[name] = { content, win, visibility, readOnly };
   focusWindow(win);
+  // CodeMirror measures itself, so it needs a nudge once the window is on-screen.
+  if (win._editor) win._editor.refresh();
   updateHint();
 }
 
@@ -233,6 +235,21 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   });
   win._refreshVisBtn = refreshVisBtn;
 
+  // Vim toggle + current mode. The toggle applies to every open window, so a
+  // user who doesn't want modal editing turns it off once.
+  const vimBtn = makeBtn('VIM', 'toolbar-btn vim-btn');
+  vimBtn.title = 'Toggle vim keys in every editor';
+  const vimBadge = document.createElement('span');
+  vimBadge.className = 'vim-mode';
+
+  function showVimMode(mode, subMode) {
+    const off = mode === 'off';
+    vimBtn.classList.toggle('active', !off);
+    vimBadge.textContent = off ? '' : `-- ${(subMode || mode).toUpperCase()} --`;
+  }
+
+  vimBtn.addEventListener('click', () => setVimEverywhere(!vimEnabled()));
+
   const savedIndicator = document.createElement('span');
   savedIndicator.className = 'doc-saved';
 
@@ -247,10 +264,12 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   if (!readOnly) {
     toolbar.appendChild(uploadLabel);
     toolbar.appendChild(visBtn);
+    if (vimAvailable()) toolbar.appendChild(vimBtn);
   }
   toolbar.appendChild(tagPillsEl);
   if (!readOnly) {
     toolbar.appendChild(tagAddInput);
+    toolbar.appendChild(vimBadge);
     toolbar.appendChild(savedIndicator);
   }
 
@@ -315,6 +334,19 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   content.appendChild(editor);
   content.appendChild(preview);
 
+  // Read-only windows never leave preview, so they keep the bare textarea.
+  const ed = readOnly
+    ? plainDocEditor(editor, {})
+    : createDocEditor(editor, {
+        onChange: () => scheduleSave(),
+        onSave: () => saveNow(),
+        onQuit: () => { closeDocument(name); print(`Closed: ${name}`, 'success'); },
+        onPreview: () => switchToPreview(),
+        onModeChange: showVimMode,
+      });
+  win._editor = ed;
+  win._setVim = on => ed.setVim(on);
+
   // ── Resize handle ──
   const resize = document.createElement('div');
   resize.className = 'doc-resize';
@@ -333,57 +365,70 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
 
   function switchToEdit() {
     mode = 'edit';
-    editor.style.display = 'block';
+    ed.show();
     preview.classList.remove('visible');
     btnEdit.classList.add('active');
     btnPreview.classList.remove('active');
     uploadLabel.style.display = '';
     visBtn.style.display = '';
+    vimBtn.style.display = '';
+    vimBadge.style.display = '';
     titleInput.readOnly = false;
     win.classList.remove('preview-mode');
-    editor.focus();
+    ed.focus();
   }
 
   function switchToPreview() {
     mode = 'preview';
-    preview.innerHTML = marked.parse(editor.value || '*No content yet.*');
+    preview.innerHTML = marked.parse(ed.getValue() || '*No content yet.*');
     rewriteDocLinks(preview);
-    editor.style.display = 'none';
+    ed.hide();
     preview.classList.add('visible');
     btnPreview.classList.add('active');
     btnEdit.classList.remove('active');
     uploadLabel.style.display = 'none';
     visBtn.style.display = 'none';
+    vimBtn.style.display = 'none';
+    vimBadge.style.display = 'none';
     titleInput.readOnly = true;
     win.classList.add('preview-mode');
   }
 
-  // Expose the edit switcher so Ctrl+` can flip an owned doc into edit mode.
+  // Expose the edit switcher so Ctrl+` can flip an owned doc into edit mode,
+  // plus the mode/focus helpers the terminal hotkeys need.
   if (!readOnly) win._switchToEdit = switchToEdit;
+  win._isPreview = () => mode === 'preview';
+  win._focusEditor = () => { if (mode === 'edit') ed.focus(); };
+
+  // Auto-save, debounced, with the toolbar indicator following along. `:w`
+  // calls saveNow() directly.
+  let saveTimer;
+
+  function saveNow() {
+    clearTimeout(saveTimer);
+    savedIndicator.textContent = 'saving…';
+    return _db.collection('documents').doc(name)
+      .update({ content: ed.getValue(), updated_at: new Date().toISOString() })
+      .then(() => { savedIndicator.textContent = 'saved ✓'; })
+      .catch(() => { savedIndicator.textContent = 'save failed ✗'; });
+  }
+
+  function scheduleSave() {
+    if (readOnly || !docs[name]) return;   // still being built, or not ours
+    docs[name].content = ed.getValue();
+    savedIndicator.textContent = 'unsaved';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 800);
+  }
 
   if (!readOnly) {
     btnEdit.addEventListener('click', switchToEdit);
     btnPreview.addEventListener('click', switchToPreview);
-
-    // Auto-save indicator
-    let saveTimer;
-    editor.addEventListener('input', () => {
-      docs[name].content = editor.value;
-      savedIndicator.textContent = 'unsaved';
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        savedIndicator.textContent = 'saving…';
-        _db.collection('documents').doc(name)
-          .update({ content: editor.value, updated_at: new Date().toISOString() })
-          .then(() => { savedIndicator.textContent = 'saved ✓'; })
-          .catch(() => { savedIndicator.textContent = 'save failed ✗'; });
-      }, 800);
-    });
   }
 
-  // Load content then apply initial mode (order matters — preview reads editor.value)
+  // Load content then apply initial mode (order matters — preview reads the editor)
   if (initialContent) {
-    editor.value = initialContent;
+    ed.setValue(initialContent);
     savedIndicator.textContent = 'loaded ✓';
   }
   if (initialMode === 'preview') switchToPreview();
@@ -397,13 +442,9 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     reader.onload = e => {
       const dataUrl = e.target.result;
       const md = `\n![${file.name}](${dataUrl})\n`;
-      const pos = editor.selectionStart;
-      editor.value = editor.value.slice(0, pos) + md + editor.value.slice(pos);
-      editor.selectionStart = editor.selectionEnd = pos + md.length;
-      docs[name].content = editor.value;
+      ed.insertAtCursor(md);
       if (mode === 'preview') switchToPreview();
-      savedIndicator.textContent = 'unsaved';
-      editor.dispatchEvent(new Event('input'));
+      scheduleSave();
     };
     reader.readAsDataURL(file);
     fileInput.value = '';
@@ -417,6 +458,12 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
 
   // ── Resize ──
   makeResizable(win, resize);
+
+  // Dragging the corner, maximizing, or un-minimizing all change the editor's
+  // box; CodeMirror needs to re-measure afterwards.
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => ed.refresh()).observe(content);
+  }
 
   return win;
 }
