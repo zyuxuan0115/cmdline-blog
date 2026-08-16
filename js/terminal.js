@@ -491,8 +491,9 @@ document.addEventListener('keydown', e => {
     const idx = current ? wins.indexOf(current) : -1;
     const next = wins[(idx + 1) % wins.length];
 
-    focusWindow(next);
-    if (next._focusEditor) next._focusEditor();
+    // Same entry as Ctrl+` : the keyboard follows the window, and an editable
+    // doc opens in edit mode with vim in normal mode.
+    focusIntoWindow(next);
   }
 });
 

@@ -90,7 +90,7 @@ const HELP_SECTIONS = [
 
 const HOTKEYS = [
   ['Ctrl + `', 'toggle focus between terminal and document window'],
-  ['Ctrl + 1', 'focus the next document window'],
+  ['Ctrl + 1', 'focus the next document window (editable ones open for editing)'],
   ['Ctrl + X', 'close the current window (or return to terminal)'],
   ['Ctrl + Z', 'toggle (close / reopen) the sidebar'],
   ['↑ / ↓',    'browse command history'],

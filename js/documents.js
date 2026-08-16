@@ -375,7 +375,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     vimBadge.style.display = '';
     titleInput.readOnly = false;
     win.classList.remove('preview-mode');
-    ed.focus();
+    ed.focusNormal();
   }
 
   function switchToPreview() {
@@ -398,7 +398,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   // plus the mode/focus helpers the terminal hotkeys need.
   if (!readOnly) win._switchToEdit = switchToEdit;
   win._isPreview = () => mode === 'preview';
-  win._focusEditor = () => { if (mode === 'edit') ed.focus(); };
+  win._focusEditor = () => { if (mode === 'edit') ed.focusNormal(); };
 
   // Auto-save, debounced, with the toolbar indicator following along. `:w`
   // calls saveNow() directly.

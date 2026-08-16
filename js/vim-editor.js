@@ -56,6 +56,7 @@ function plainDocEditor(textarea, handlers) {
     getValue: () => textarea.value,
     setValue: v => { textarea.value = v; },
     focus: () => textarea.focus(),
+    focusNormal: () => textarea.focus(),
     show: () => { textarea.style.display = 'block'; },
     hide: () => { textarea.style.display = 'none'; },
     insertAtCursor: text => {
@@ -100,6 +101,20 @@ function createDocEditor(textarea, handlers = {}) {
     getValue: () => cm.getValue(),
     setValue: v => { cm.setValue(v); cm.clearHistory(); },
     focus: () => cm.focus(),
+    // Arriving at a window from somewhere else (Ctrl+`, Ctrl+1, Edit tab)
+    // starts in normal mode rather than wherever the editor was last left, so
+    // the first keys you press are always commands.
+    focusNormal: () => {
+      cm.focus();
+      const vim = cm.state.vim;
+      // The keymap is 'vim' in normal mode but 'vim-insert' / 'vim-replace'
+      // while typing, so match the family rather than the exact name.
+      if (!vim || !String(cm.getOption('keyMap') || '').startsWith('vim')) return;
+      // Insert mode is left through its own exit path; Esc only reaches the
+      // keymap in the modes handleKey serves.
+      if (vim.insertMode) CodeMirror.Vim.exitInsertMode(cm);
+      if (vim.visualMode) CodeMirror.Vim.handleKey(cm, '<Esc>');
+    },
     show: () => { wrapper.style.display = ''; cm.refresh(); },
     hide: () => { wrapper.style.display = 'none'; },
     insertAtCursor: text => { cm.replaceSelection(text); cm.focus(); },

@@ -76,6 +76,9 @@ registers, macros, marks, `/` search and `:` ex commands.
 
 The current mode shows next to the toolbar's **VIM** button; that button turns
 modal editing off (or back on) for every open window and remembers the choice.
+Arriving at a window from elsewhere — ``Ctrl+` `` from the terminal, `Ctrl+1`
+between windows, or the **Edit** tab — always lands in normal mode, whatever
+mode the editor was left in.
 `Ctrl+X` stays the app's "close window" hotkey, so vim's decrement is unmapped.
 If the CodeMirror CDN is unreachable the window falls back to a plain textarea,
 so documents stay editable either way.
