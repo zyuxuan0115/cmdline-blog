@@ -42,6 +42,7 @@ A web-based markdown document editor with a retro terminal interface and animate
 | `list` | List all your documents |
 | `blog <username>` | Open that user's published posts as a normal blog page, in a new tab |
 | `blog` | Open your own blog page |
+| `blog --name <title>` | Title your own blog (`--name ''` resets it to your username; `--name` alone prints the current title) |
 | `tag <hash> <tag>` | Add a tag |
 | `untag <hash> <tag>` | Remove a tag |
 | `tags [tag]` | List tags or files under a tag |

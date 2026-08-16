@@ -17,6 +17,7 @@ const HELP_SECTIONS = [
       ['hash &lt;index&gt;',                'print the hash of a document'],
       ['blog &lt;username&gt;',            'read a user’s published posts in a new tab'],
       ['blog',                           'read your own published posts'],
+      ['blog --name &lt;title&gt;',        'title your own blog (--name \'\' resets it)'],
     ]
   },
   {

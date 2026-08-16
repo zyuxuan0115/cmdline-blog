@@ -14,6 +14,30 @@ async function dbSetVisibility(name, vis) {
   updateListSidebarDoc(name, { visibility: vis });
 }
 
+// ─── Blog Name (Firestore) ────────────────────────────────────────────────────
+// A user's blog title lives on their usernames/<lowercase> mapping — the one
+// document about a user that anyone is allowed to read, so blog.html can show
+// the title to visitors who aren't signed in. An unset name means the blog is
+// simply titled with the username.
+
+const BLOG_NAME_MAX = 60;
+
+function blogNameRef() {
+  return _db.collection('usernames').doc(currentUser.displayName.toLowerCase());
+}
+
+async function dbGetBlogName() {
+  const snap = await blogNameRef().get();
+  return (snap.exists && snap.data().blog_name) || '';
+}
+
+// An empty name removes the field, restoring the username as the title.
+async function dbSetBlogName(name) {
+  await blogNameRef().update({
+    blog_name: name || firebase.firestore.FieldValue.delete(),
+  });
+}
+
 // ─── Tag Helpers (Firestore) ──────────────────────────────────────────────────
 
 async function getTags(filename) {

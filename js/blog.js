@@ -82,6 +82,11 @@ function tagsHtml(doc) {
   return `<div class="post-tags">${[tags, badge].filter(Boolean).join(' · ')}</div>`;
 }
 
+// The banner: the title its owner gave the blog, else their username.
+function siteTitle(user) {
+  return (user && (user.blogName || user.username)) || username || 'CmdLine Blog';
+}
+
 function showError(msg) {
   if (mainEl) mainEl.innerHTML = `<p class="error">${escapeHtml(msg)}</p>`;
 }
@@ -111,7 +116,11 @@ async function resolveUsername(name) {
   const snap = await _db.collection('usernames').doc(name.toLowerCase()).get();
   if (!snap.exists) return null;
   const d = snap.data();
-  return { uid: d.uid, username: d.username || name };
+  return {
+    uid: d.uid,
+    username: d.username || name,
+    blogName: (d.blog_name || '').trim(),   // set by `blog --name <title>`
+  };
 }
 
 // Public posts always; `shared` ones too when the viewer is allowed to see them
@@ -136,15 +145,20 @@ async function fetchPosts(uid, viewer) {
 
 // ─── Views ────────────────────────────────────────────────────────────────────
 
-function renderIndex(author, posts) {
-  document.title = `${author} — CmdLine Blog`;
-  authorEl.textContent = author;
-  subEl.textContent = posts.length
+function renderIndex(user, posts) {
+  const title = siteTitle(user);
+  document.title = `${title} — CmdLine Blog`;
+  authorEl.textContent = title;
+
+  // A titled blog still names its author underneath — that name is what the
+  // terminal's `blog <username>` and this page's URL use.
+  const count = posts.length
     ? `${posts.length} post${posts.length === 1 ? '' : 's'}`
     : 'No posts yet';
+  subEl.textContent = user.blogName ? `${count} · by ${user.username}` : count;
 
   if (!posts.length) {
-    mainEl.innerHTML = `<p class="empty">${escapeHtml(author)} hasn't published anything yet.</p>`;
+    mainEl.innerHTML = `<p class="empty">${escapeHtml(user.username)} hasn't published anything yet.</p>`;
     return;
   }
 
@@ -168,11 +182,12 @@ function renderIndex(author, posts) {
   });
 }
 
-function renderPost(doc) {
+function renderPost(doc, site) {
   const author = doc.author_name || username || 'Unknown';
+  const banner = site ? siteTitle(site) : author;
   const title = postTitle(doc);
-  document.title = `${title} — ${author}`;
-  authorEl.textContent = author;
+  document.title = `${title} — ${banner}`;
+  authorEl.textContent = banner;
   subEl.innerHTML = `<a href="?u=${encodeURIComponent(username || author)}">All posts</a>`;
 
   const date = postDate(doc);
@@ -223,7 +238,11 @@ async function main() {
       showError('That post does not exist, or is not published.');
       return;
     }
-    renderPost(snap.data());
+    // Best-effort: the author's mapping carries their blog title for the banner.
+    let site = null;
+    const owner = username || snap.data().author_name || '';
+    if (owner) { try { site = await resolveUsername(owner); } catch (_) { /* banner falls back to the author's name */ } }
+    renderPost(snap.data(), site);
     return;
   }
 
@@ -242,9 +261,9 @@ async function main() {
   }
 
   try {
-    renderIndex(user.username, await fetchPosts(user.uid, viewer));
+    renderIndex(user, await fetchPosts(user.uid, viewer));
   } catch (e) {
-    authorEl.textContent = user.username;
+    authorEl.textContent = siteTitle(user);
     showError(`Could not load posts: ${e.message}`);
   }
 }

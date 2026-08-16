@@ -90,20 +90,27 @@ service cloud.firestore {
 
     // Username → uid mapping so users can be addressed by name (e.g.
     // `friend <username>`). The doc id is the lowercased username and it holds
-    // only { uid, username } — never the email — so it is safe to look up.
+    // only { uid, username, blog_name? } — never the email — so it is safe to
+    // look up.
     match /usernames/{name} {
       // A single lookup is public (needed during registration, before sign-in);
-      // enumeration is not.
+      // enumeration is not. It is also how blog.html reads a blog's title.
       allow get:  if true;
       allow list: if false;
       // You may only claim a name that maps to yourself, and only while it is
-      // free (create fails when the doc exists, and updates are forbidden), so
-      // usernames stay unique and can't be hijacked.
+      // free (create fails when the doc exists), so usernames stay unique and
+      // can't be hijacked.
       // A user claims their own name; the admin may backfill mappings for
       // existing accounts (uid points at the account, not the admin).
       allow create: if (request.auth != null && request.resource.data.uid == request.auth.uid)
                     || isAdmin();
-      allow update: if false;
+      // The owner may edit the display bits of their own mapping — currently
+      // just blog_name, set by `blog --name`. uid and username are frozen, so a
+      // name still can't be re-pointed at someone else.
+      allow update: if request.auth != null
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.username == resource.data.username;
       allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isAdmin();
     }
 

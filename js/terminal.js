@@ -164,9 +164,45 @@ const COMMANDS = {
   // Open a user's published posts in the plain-text blog reader (blog.html),
   // in a new tab so the terminal session is left alone. With no username it
   // opens your own blog.
-  blog(args) {
-    const name = args.trim().replace(/^@/, '') || (currentUser && currentUser.displayName) || '';
-    if (!name) { print('Usage: blog <username>', 'error'); return; }
+  //
+  //   blog --name <title>   title your own blog (--name '' goes back to your
+  //                         username; --name alone prints the current title)
+  async blog(args) {
+    const arg = args.trim();
+
+    const nameFlag = arg.match(/^--name\b\s*([\s\S]*)$/);
+    if (nameFlag) {
+      if (!requireLogin()) return;
+      const raw = nameFlag[1].trim();
+      const quoted = raw.match(/^(['"])([\s\S]*)\1$/);
+      const title = quoted ? quoted[2].trim() : raw;
+
+      if (!raw) {   // `blog --name` on its own — report, don't change
+        try {
+          const current = await dbGetBlogName();
+          print(current
+            ? `Your blog is titled "${current}".`
+            : `Your blog is titled "${currentUser.displayName}" (the default). Set one with  blog --name <title>`, 'info');
+        } catch (e) { print(`Error: ${e.message}`, 'error'); }
+        return;
+      }
+      if (title.length > BLOG_NAME_MAX) {
+        print(`Error: keep the title under ${BLOG_NAME_MAX} characters.`, 'error'); return;
+      }
+
+      try {
+        await ensureUsernameMapping();   // older accounts may have no mapping yet
+        await dbSetBlogName(title);
+      } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
+
+      print(title
+        ? `Your blog is now titled "${title}".`
+        : `Title cleared — your blog shows as "${currentUser.displayName}" again.`, 'success');
+      return;
+    }
+
+    const name = arg.replace(/^@/, '') || (currentUser && currentUser.displayName) || '';
+    if (!name) { print('Usage: blog <username>   |   blog --name <title>', 'error'); return; }
     const url = `blog.html?u=${encodeURIComponent(name)}`;
     if (window.open(url, '_blank')) {
       print(`Opened ${name}'s blog in a new tab.`, 'success');
