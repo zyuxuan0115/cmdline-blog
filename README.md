@@ -51,6 +51,8 @@ A web-based markdown document editor with a retro terminal interface and animate
 | `clear` | Clear terminal output |
 | `help` | Open help sidebar |
 | `help close` | Close help sidebar |
+| `editor commands` | Open the vim editor commands sidebar |
+| `editor commands close` | Close the editor commands sidebar |
 
 ## Editing (vim)
 

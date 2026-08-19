@@ -48,12 +48,18 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Posts are written in a plain editor, where pressing Enter means "new line" —
+// not markdown's "same paragraph". `breaks` keeps those single newlines.
+if (typeof marked !== 'undefined') marked.setOptions({ gfm: true, breaks: true });
+
 // Posts are written by other people and shown to anyone, so the rendered
 // markdown is sanitised. If DOMPurify didn't load, fall back to plain text
 // rather than injecting unchecked HTML.
 function renderMarkdown(md) {
   const source = md || '*This post is empty.*';
-  if (typeof DOMPurify === 'undefined') return `<p>${escapeHtml(source)}</p>`;
+  if (typeof DOMPurify === 'undefined') {
+    return `<p style="white-space:pre-wrap">${escapeHtml(source)}</p>`;
+  }
   return DOMPurify.sanitize(marked.parse(source));
 }
 

@@ -1,5 +1,10 @@
 // ─── Document Windows ─────────────────────────────────────────────────────────
 
+// Documents are written in a plain editor, where pressing Enter means "new
+// line" — not markdown's "same paragraph". `breaks` keeps those single
+// newlines, in the preview and on the blog page alike.
+if (typeof marked !== 'undefined') marked.setOptions({ gfm: true, breaks: true });
+
 function openDocument(name, content = '', visibility = 'private', title = '', initialMode = 'edit', readOnly = false, staticTags = null) {
   const win = buildWindow(name, content, visibility, title, initialMode, readOnly, staticTags);
   container.appendChild(win);
@@ -63,9 +68,9 @@ async function openByHash(hash) {
   } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
   const d = snap.exists ? snap.data() : null;
 
-  // Own doc
+  // Own doc — opens ready to edit (vim in normal mode); the Preview tab reads it.
   if (d && d.user_id === currentUser.uid) {
-    openDocument(hash, d.content, d.visibility, d.title || '', 'preview', false, d.tags || []);
+    openDocument(hash, d.content, d.visibility, d.title || '', 'edit', false, d.tags || []);
     print(`Opened: ${d.title || hash.slice(0, 8) + '…'}`, 'success');
     return;
   }

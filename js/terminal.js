@@ -100,7 +100,10 @@ const COMMANDS = {
         || (!isMine && data.visibility !== 'public' && data.visibility !== 'shared')) {
       print(`Error: document not found.`, 'error'); return;
     }
-    openDocument(key, data.content, data.visibility, data.title || '', 'preview', !isMine, data.tags || []);
+    // Your own docs open ready to edit (vim in normal mode); other people's
+    // open in preview, since they're read-only anyway.
+    openDocument(key, data.content, data.visibility, data.title || '',
+                 isMine ? 'edit' : 'preview', !isMine, data.tags || []);
     print(`Opened: ${key}${isMine ? '' : ' (read-only)'}`, 'success');
   },
 
@@ -327,6 +330,14 @@ const COMMANDS = {
     openMessagesSidebar();
   },
   inbox(args) { COMMANDS.messages(args); },
+
+  // Vim reference for the document editors, in its own sidebar view.
+  editor(args) {
+    const rest = args.trim();
+    if (rest === 'commands close') { closeHelpSidebar(); return; }
+    if (rest === 'commands' || rest === '') { openEditorSidebar(); return; }
+    print('Usage: editor commands  |  editor commands close', 'error');
+  },
 
   hotkeys(args) {
     if (args.trim() === 'close') {

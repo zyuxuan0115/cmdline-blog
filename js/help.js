@@ -21,23 +21,6 @@ const HELP_SECTIONS = [
     ]
   },
   {
-    title: 'Editor (vim)',
-    entries: [
-      ['i / a / o',                      'insert before / after cursor, or on a new line'],
-      ['Esc',                            'back to normal mode'],
-      ['h j k l · w b · 0 $ · gg G',     'motions — prefix with a count, e.g. 3j'],
-      ['dd · yy · p · x',                'delete line, yank line, paste, delete char'],
-      ['dw · ciw · d$',                  'operator + motion / text object'],
-      ['v · V · Ctrl+V',                 'visual, visual line, visual block'],
-      ['u · Ctrl+R',                     'undo / redo'],
-      ['/text · n · N',                  'search, next / previous match'],
-      [':s/old/new/g',                   'substitute on the current line'],
-      [':w · :q · :wq · :x',             'save · close window · save and close'],
-      [':pre',                           'switch this window to preview'],
-      ['VIM button',                     'turn modal editing on / off everywhere'],
-    ]
-  },
-  {
     title: 'Tags',
     entries: [
       ['tag -h &lt;hash&gt; &lt;tag&gt;',   'add a tag by hash'],
@@ -84,6 +67,78 @@ const HELP_SECTIONS = [
       ['hotkeys close', 'close the hotkeys sidebar'],
       ['commands',       'open this sidebar'],
       ['commands close', 'close this sidebar'],
+      ['editor commands',       'show the vim editor commands'],
+      ['editor commands close', 'close the editor commands sidebar'],
+    ]
+  }
+];
+
+// Vim commands for the document editors, shown in their own sidebar view by
+// the  editor commands  command. Kept apart from HELP_SECTIONS so the Commands
+// sidebar stays about the terminal.
+const EDITOR_SECTIONS = [
+  {
+    title: 'Modes',
+    entries: [
+      ['i / a',                          'insert before / after the cursor'],
+      ['I / A',                          'insert at start / end of the line'],
+      ['o / O',                          'open a new line below / above'],
+      ['Esc',                            'back to normal mode'],
+      ['v · V · Ctrl+V',                 'visual, visual line, visual block'],
+      ['VIM button',                     'turn modal editing on / off everywhere'],
+    ]
+  },
+  {
+    title: 'Motions',
+    entries: [
+      ['h j k l',                        'left, down, up, right'],
+      ['w / b / e',                      'next word, previous word, end of word'],
+      ['0 / ^ / $',                      'start of line, first non-blank, end of line'],
+      ['gg / G',                         'top / bottom of the document'],
+      ['{ / }',                          'previous / next paragraph'],
+      ['f&lt;char&gt; / t&lt;char&gt;',      'jump to / just before a character'],
+      ['3j',                             'any motion takes a count'],
+    ]
+  },
+  {
+    title: 'Editing',
+    entries: [
+      ['x / X',                          'delete the character under / before the cursor'],
+      ['dd · yy · p · P',           'delete line, yank line, paste after / before'],
+      ['dw · d$ · diw',                'operator + motion or text object'],
+      ['cw · ciw · cc',                'change word / inner word / whole line'],
+      ['r&lt;char&gt;',                    'replace a single character'],
+      ['J',                              'join this line with the next'],
+      ['&gt;&gt; / &lt;&lt;',                'indent / outdent the line'],
+      ['u · Ctrl+R',                     'undo / redo'],
+      ['. ',                             'repeat the last change'],
+    ]
+  },
+  {
+    title: 'Search & replace',
+    entries: [
+      ['/text · ?text',                 'search forwards / backwards'],
+      ['n / N',                          'next / previous match'],
+      ['*',                              'search for the word under the cursor'],
+      [':s/old/new/g',                   'substitute on the current line'],
+      [':%s/old/new/g',                  'substitute in the whole document'],
+    ]
+  },
+  {
+    title: 'Registers, marks & macros',
+    entries: [
+      ['"ayy · "ap',                    'yank into / paste from register a'],
+      ['ma · \'a',                      'set mark a · jump to mark a'],
+      ['qa · q · @a',                   'record macro a, stop, replay'],
+    ]
+  },
+  {
+    title: 'Ex commands',
+    entries: [
+      [':w',                             'save now'],
+      [':q',                             'close the window'],
+      [':wq · :x',                       'save and close'],
+      [':pre',                           'switch this window to preview'],
     ]
   }
 ];
@@ -99,7 +154,7 @@ const HOTKEYS = [
 const helpSidebar = document.getElementById('help-sidebar');
 const helpContent = document.getElementById('help-sidebar-content');
 const sidebarTitle = document.getElementById('help-sidebar-title');
-let currentSidebarView = null; // 'help', 'list', or 'hotkeys'
+let currentSidebarView = null; // 'help', 'list', 'hotkeys', 'messages', or 'editor'
 let lastListedDocs = []; // docs from the most recent  list  command, in display order
 let lastListFilter = ''; // '', 'public', 'mywork', or 'private'
 let lastSidebarView = null; // last view shown before it was closed, for Ctrl+Z reopen
@@ -184,6 +239,22 @@ function openHotkeysSidebar() {
   print('Hotkeys opened on the right.', 'muted');
 }
 
+function buildEditorHTML() {
+  return EDITOR_SECTIONS.map(section => `
+    <div class="help-section">
+      <div class="help-section-title">${section.title}</div>
+      ${section.entries.map(([cmd, desc]) =>
+        `<div class="help-entry"><code>${cmd}</code><br><span>— ${desc}</span></div>`
+      ).join('')}
+    </div>
+  `).join('');
+}
+
+function openEditorSidebar() {
+  swapSidebarContent(buildEditorHTML(), 'editor', 'Editor Commands');
+  print('Editor commands opened on the right.', 'muted');
+}
+
 function openHelpSidebar() {
   swapSidebarContent(buildHelpHTML(), 'help', 'Commands');
   print('Help opened on the right.', 'muted');
@@ -201,6 +272,7 @@ function reopenSidebar() {
   if (lastSidebarView === 'hotkeys') { openHotkeysSidebar(); return true; }
   if (lastSidebarView === 'list')    { openListSidebar(lastListFilter); return true; }
   if (lastSidebarView === 'messages') { openMessagesSidebar(); return true; }
+  if (lastSidebarView === 'editor')  { openEditorSidebar();  return true; }
   return false;
 }
 
