@@ -111,6 +111,20 @@ a { color: var(--text); }
   color: var(--muted);
 }
 
+/* Each tag links to that author's posts carrying it. */
+.post-tags a.tag {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.post-tags a.tag:hover {
+  color: var(--secondary);
+  text-decoration: underline;
+}
+
+/* The tag being filtered on, shown in the header. */
+.tag-current { font-style: italic; }
+
 .badge {
   font-size: 14px;
   color: var(--muted);

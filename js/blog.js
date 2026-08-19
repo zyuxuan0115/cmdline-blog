@@ -3,6 +3,7 @@
 // `blog <username>` command. Two views, chosen by the query string:
 //
 //   blog.html?u=<username>            → index of that user's posts
+//   blog.html?u=<username>&t=<tag>    → that user's posts carrying one tag
 //   blog.html?u=<username>&p=<hash>   → a single post
 //
 // It reads Firestore directly with the same rules as the app: public posts are
@@ -12,6 +13,7 @@
 const params   = new URLSearchParams(location.search);
 const username = (params.get('u') || '').trim();
 const postHash = (params.get('p') || '').trim();
+const tagFilter = (params.get('t') || '').trim();   // set by clicking a tag
 
 const HASH_RE = /^[a-f0-9]{64}$/;
 
@@ -81,8 +83,22 @@ function postUrl(doc) {
   return `?u=${encodeURIComponent(username || doc.author_name || '')}&p=${encodeURIComponent(doc.filename)}`;
 }
 
-function tagsHtml(doc) {
-  const tags = (doc.tags || []).map(t => `#${escapeHtml(t)}`).join(' ');
+// The index of one author's posts, optionally narrowed to a single tag.
+function indexUrl(owner = username, tag = '') {
+  const q = `?u=${encodeURIComponent(owner)}`;
+  return tag ? `${q}&t=${encodeURIComponent(tag)}` : q;
+}
+
+// Tags stay as their author typed them, so matching ignores case.
+function docHasTag(doc, tag) {
+  const wanted = tag.toLowerCase();
+  return (doc.tags || []).some(t => String(t).toLowerCase() === wanted);
+}
+
+// Every tag is a link to that author's posts carrying it.
+function tagsHtml(doc, owner = username) {
+  const tags = (doc.tags || []).map(t =>
+    `<a class="tag" href="${escapeHtml(indexUrl(owner, t))}">#${escapeHtml(t)}</a>`).join(' ');
   const badge = doc.visibility === 'shared' ? '<span class="badge">friends only</span>' : '';
   if (!tags && !badge) return '';
   return `<div class="post-tags">${[tags, badge].filter(Boolean).join(' · ')}</div>`;
@@ -151,26 +167,36 @@ async function fetchPosts(uid, viewer) {
 
 // ─── Views ────────────────────────────────────────────────────────────────────
 
+// The index, either of everything this author published or — when a tag was
+// clicked — of just the posts carrying that tag.
 function renderIndex(user, posts) {
   const title = siteTitle(user);
-  document.title = `${title} — CmdLine Blog`;
+  const shown = tagFilter ? posts.filter(doc => docHasTag(doc, tagFilter)) : posts;
+  document.title = tagFilter ? `#${tagFilter} — ${title}` : `${title} — CmdLine Blog`;
   authorEl.textContent = title;
 
   // A titled blog still names its author underneath — that name is what the
   // terminal's `blog <username>` and this page's URL use.
-  const count = posts.length
-    ? `${posts.length} post${posts.length === 1 ? '' : 's'}`
-    : 'No posts yet';
-  subEl.textContent = user.blogName ? `${count} · by ${user.username}` : count;
+  const by = user.blogName ? ` · by ${user.username}` : '';
+  const count = shown.length ? `${shown.length} post${shown.length === 1 ? '' : 's'}` : 'No posts';
+  if (tagFilter) {
+    subEl.innerHTML = `${escapeHtml(count)} tagged <span class="tag-current">#${escapeHtml(tagFilter)}</span>`
+      + `${escapeHtml(by)} · <a href="${escapeHtml(indexUrl(user.username))}">all posts</a>`;
+  } else {
+    subEl.textContent = (shown.length ? count : 'No posts yet') + by;
+  }
 
-  if (!posts.length) {
-    mainEl.innerHTML = `<p class="empty">${escapeHtml(user.username)} hasn't published anything yet.</p>`;
+  if (!shown.length) {
+    mainEl.innerHTML = tagFilter
+      ? `<p class="empty">Nothing here is tagged #${escapeHtml(tagFilter)}.</p>
+         <nav class="post-nav"><a href="${escapeHtml(indexUrl(user.username))}">← All posts by ${escapeHtml(user.username)}</a></nav>`
+      : `<p class="empty">${escapeHtml(user.username)} hasn't published anything yet.</p>`;
     return;
   }
 
   // Each entry shows its whole post, under the date it was written — the date
   // doubles as the permalink.
-  mainEl.innerHTML = posts.map(doc => {
+  mainEl.innerHTML = shown.map(doc => {
     const url = escapeHtml(postUrl(doc));
     const date = postDate(doc);
     return `
@@ -178,14 +204,19 @@ function renderIndex(user, posts) {
         ${date ? `<h2 class="post-date"><a href="${url}">${escapeHtml(date)}</a></h2>` : ''}
         ${doc.title ? `<h3 class="post-title"><a href="${url}">${escapeHtml(doc.title)}</a></h3>` : ''}
         <div class="post-body"></div>
-        ${tagsHtml(doc)}
+        ${tagsHtml(doc, user.username)}
       </article>`;
   }).join('');
 
   mainEl.querySelectorAll('.post-body').forEach((body, i) => {
-    body.innerHTML = renderMarkdown(posts[i].content);
+    body.innerHTML = renderMarkdown(shown[i].content);
     rewriteDocLinks(body);
   });
+
+  if (tagFilter) {
+    mainEl.insertAdjacentHTML('beforeend',
+      `<nav class="post-nav"><a href="${escapeHtml(indexUrl(user.username))}">← All posts by ${escapeHtml(user.username)}</a></nav>`);
+  }
 }
 
 function renderPost(doc, site) {
@@ -202,7 +233,7 @@ function renderPost(doc, site) {
       ${date ? `<h2 class="post-date">${escapeHtml(date)}</h2>` : ''}
       ${doc.title ? `<h3 class="post-title">${escapeHtml(title)}</h3>` : ''}
       <div class="post-body"></div>
-      ${tagsHtml(doc)}
+      ${tagsHtml(doc, username || author)}
     </article>
     <nav class="post-nav">
       <a href="?u=${encodeURIComponent(username || author)}">← All posts by ${escapeHtml(author)}</a>
