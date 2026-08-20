@@ -180,8 +180,9 @@ function renderIndex(user, posts) {
   const by = user.blogName ? ` · by ${user.username}` : '';
   const count = shown.length ? `${shown.length} post${shown.length === 1 ? '' : 's'}` : 'No posts';
   if (tagFilter) {
-    subEl.innerHTML = `${escapeHtml(count)} tagged <span class="tag-current">#${escapeHtml(tagFilter)}</span>`
-      + `${escapeHtml(by)} · <a href="${escapeHtml(indexUrl(user.username))}">all posts</a>`;
+    // The way back to the whole blog is the link under the last post, so the
+    // header stays a plain description of what's being shown.
+    subEl.innerHTML = `${escapeHtml(count)} <span class="tag-current">#${escapeHtml(tagFilter)}</span>${escapeHtml(by)}`;
   } else {
     subEl.textContent = (shown.length ? count : 'No posts yet') + by;
   }

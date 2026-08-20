@@ -228,7 +228,8 @@ a { color: var(--text); }
   margin: 64px auto 48px;
   padding: 0 32px;
   display: flex;
-  gap: 16px;
+  justify-content: center;
+  gap: 8px;                 /* tight enough for the "·" to read as a separator */
   font-size: 14px;
   color: var(--muted);
 }
