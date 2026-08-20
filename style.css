@@ -347,6 +347,17 @@ input, textarea, button, select {
 .terminal-line.muted   { color: #556677; }
 .terminal-line.pink    { color: #ff69b4; }
 
+/* A command you can type, boxed the same way as the desktop hint's. */
+.terminal-line code.cmd-chip {
+  background: #0d0d0d;
+  color: #ffadd6;
+  padding: 1px 4px;
+  border: 1px solid #ffadd6;
+  box-shadow: 2px 2px 0 rgba(255, 173, 214, 0.3);
+  font-family: 'Cubic 11', monospace;
+  font-size: 10px;
+}
+
 #terminal-input-row {
   display: flex;
   align-items: center;

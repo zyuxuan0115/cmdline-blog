@@ -1,7 +1,19 @@
 // ─── Terminal ─────────────────────────────────────────────────────────────────
 
+// The two multi-word commands are boxed so they read as one thing to type.
+function commandChip(name) {
+  const el = document.createElement('code');
+  el.className = 'cmd-chip';
+  el.textContent = name;
+  return el;
+}
+
 function printBanner() {
-  print('Type  commands  to see available commands.', 'info');
+  const line = document.createElement('div');
+  line.className = 'terminal-line info';
+  line.append('Type ', commandChip('commands'), ', ', commandChip('editor commands'),
+              ', hotkeys, list to see what you can do next.');
+  output.appendChild(line);
   print('', 'muted');
 }
 
