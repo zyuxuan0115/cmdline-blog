@@ -14,6 +14,14 @@
       "**/node_modules/**",
       "functions/**",
       "README.md"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|css|js)",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      }
     ]
   }
 }
