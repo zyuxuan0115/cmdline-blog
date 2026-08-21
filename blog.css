@@ -86,7 +86,10 @@ a { color: var(--text); }
 .site-search[hidden] { display: none; }
 
 .search-toggle {
-  padding: 0;
+  /* Padding pulled back by the same margin: a 25px target around a 17px glass,
+     without pushing the line apart. */
+  padding: 4px;
+  margin: -4px;
   border: 0;
   background: none;
   line-height: 0;
