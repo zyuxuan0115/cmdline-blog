@@ -81,3 +81,35 @@ function makeResizable(win, handle) {
     document.addEventListener('mouseup', onUp);
   });
 }
+
+// Copy text to the system clipboard. The async Clipboard API needs a secure
+// context (https or localhost), so fall back to the old hidden-textarea trick
+// when it isn't there. Returns whether the copy went through.
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) { /* denied or unavailable — try the fallback */ }
+
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  const selection = document.getSelection();
+  const previous = selection.rangeCount ? selection.getRangeAt(0) : null;
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+  ta.remove();
+  if (previous) { selection.removeAllRanges(); selection.addRange(previous); }
+  return ok;
+}
+
+// What to call the clipboard modifier when telling someone how to paste.
+function modKeyName() {
+  return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? 'Cmd' : 'Ctrl';
+}

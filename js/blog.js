@@ -4,6 +4,7 @@
 //
 //   blog.html?u=<username>            → index of that user's posts
 //   blog.html?u=<username>&t=<tag>    → that user's posts carrying one tag
+//   blog.html?u=<username>&page=<n>   → a later page of that index
 //   blog.html?u=<username>&p=<hash>   → a single post
 //
 // It reads Firestore directly with the same rules as the app: public posts are
@@ -14,8 +15,13 @@ const params   = new URLSearchParams(location.search);
 const username = (params.get('u') || '').trim();
 const postHash = (params.get('p') || '').trim();
 const tagFilter = (params.get('t') || '').trim();   // set by clicking a tag
+const pageParam = Math.max(1, parseInt(params.get('page'), 10) || 1);
 
 const HASH_RE = /^[a-f0-9]{64}$/;
+
+// Posts are shown whole on the index, so only a screenful's worth per page —
+// the rest are a `next` link away.
+const PAGE_SIZE = 15;
 
 const authorEl = document.getElementById('blog-author');
 const subEl    = document.getElementById('blog-sub');
@@ -83,10 +89,13 @@ function postUrl(doc) {
   return `?u=${encodeURIComponent(username || doc.author_name || '')}&p=${encodeURIComponent(doc.filename)}`;
 }
 
-// The index of one author's posts, optionally narrowed to a single tag.
-function indexUrl(owner = username, tag = '') {
-  const q = `?u=${encodeURIComponent(owner)}`;
-  return tag ? `${q}&t=${encodeURIComponent(tag)}` : q;
+// The index of one author's posts, optionally narrowed to a single tag and to
+// one page of it. Page 1 is the bare URL, so links to a blog stay tidy.
+function indexUrl(owner = username, tag = '', page = 1) {
+  let q = `?u=${encodeURIComponent(owner)}`;
+  if (tag)      q += `&t=${encodeURIComponent(tag)}`;
+  if (page > 1) q += `&page=${page}`;
+  return q;
 }
 
 // Tags stay as their author typed them, so matching ignores case.
@@ -168,36 +177,43 @@ async function fetchPosts(uid, viewer) {
 // ─── Views ────────────────────────────────────────────────────────────────────
 
 // The index, either of everything this author published or — when a tag was
-// clicked — of just the posts carrying that tag.
+// clicked — of just the posts carrying that tag, fifteen posts at a time.
 function renderIndex(user, posts) {
   const title = siteTitle(user);
   const shown = tagFilter ? posts.filter(doc => docHasTag(doc, tagFilter)) : posts;
   document.title = tagFilter ? `#${tagFilter} — ${title}` : `${title} — CmdLine Blog`;
   authorEl.textContent = title;
 
+  // A page number past the end (a stale link, a hand-typed URL) shows the last
+  // page rather than an empty one.
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const page = Math.min(pageParam, pageCount);
+  const onPage = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   // A titled blog still names its author underneath — that name is what the
   // terminal's `blog <username>` and this page's URL use.
   const by = user.blogName ? ` · by ${user.username}` : '';
   const count = shown.length ? `${shown.length} post${shown.length === 1 ? '' : 's'}` : 'No posts';
+  const where = pageCount > 1 ? ` · page ${page} of ${pageCount}` : '';
   if (tagFilter) {
     // The way back to the whole blog is the link under the last post, so the
     // header stays a plain description of what's being shown.
-    subEl.innerHTML = `${escapeHtml(count)} <span class="tag-current">#${escapeHtml(tagFilter)}</span>${escapeHtml(by)}`;
+    subEl.innerHTML = `${escapeHtml(count)} <span class="tag-current">#${escapeHtml(tagFilter)}</span>${escapeHtml(by + where)}`;
   } else {
-    subEl.textContent = (shown.length ? count : 'No posts yet') + by;
+    subEl.textContent = (shown.length ? count : 'No posts yet') + by + where;
   }
 
   if (!shown.length) {
     mainEl.innerHTML = tagFilter
-      ? `<p class="empty">Nothing here is tagged #${escapeHtml(tagFilter)}.</p>
-         <nav class="post-nav"><a href="${escapeHtml(indexUrl(user.username))}">← All posts by ${escapeHtml(user.username)}</a></nav>`
+      ? `<p class="empty">Nothing here is tagged #${escapeHtml(tagFilter)}.</p>`
       : `<p class="empty">${escapeHtml(user.username)} hasn't published anything yet.</p>`;
+    if (tagFilter) mainEl.insertAdjacentHTML('beforeend', navHtml(user, page, pageCount));
     return;
   }
 
   // Each entry shows its whole post, under the date it was written — the date
   // doubles as the permalink.
-  mainEl.innerHTML = shown.map(doc => {
+  mainEl.innerHTML = onPage.map(doc => {
     const url = escapeHtml(postUrl(doc));
     const date = postDate(doc);
     return `
@@ -210,14 +226,27 @@ function renderIndex(user, posts) {
   }).join('');
 
   mainEl.querySelectorAll('.post-body').forEach((body, i) => {
-    body.innerHTML = renderMarkdown(shown[i].content);
+    body.innerHTML = renderMarkdown(onPage[i].content);
     rewriteDocLinks(body);
   });
 
+  mainEl.insertAdjacentHTML('beforeend', navHtml(user, page, pageCount));
+}
+
+// Under the last post: the way to the neighbouring pages, and — on a tag page —
+// back to the whole blog. Empty when there is nowhere to go.
+function navHtml(user, page, pageCount) {
+  const link = (cls, to, text) =>
+    `<a class="${cls}" href="${escapeHtml(indexUrl(user.username, tagFilter, to))}">${text}</a>`;
+
+  const links = [];
+  if (page > 1) links.push(link('prev', page - 1, '← previous'));
   if (tagFilter) {
-    mainEl.insertAdjacentHTML('beforeend',
-      `<nav class="post-nav"><a href="${escapeHtml(indexUrl(user.username))}">← All posts by ${escapeHtml(user.username)}</a></nav>`);
+    links.push(`<a class="all-posts" href="${escapeHtml(indexUrl(user.username))}">← All posts by ${escapeHtml(user.username)}</a>`);
   }
+  if (page < pageCount) links.push(link('next', page + 1, 'next →'));
+
+  return links.length ? `<nav class="post-nav pager">${links.join('')}</nav>` : '';
 }
 
 function renderPost(doc, site) {

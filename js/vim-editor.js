@@ -131,3 +131,17 @@ function setVimEverywhere(on) {
   setVimEnabled(on);
   Object.values(docs).forEach(d => d.win._setVim && d.win._setVim(on));
 }
+
+// Load text into vim's unnamed register so `p` pastes it in any open editor.
+// `+` gets a copy too, for people who reach for the system-clipboard register.
+function setVimRegister(text) {
+  if (!vimAvailable()) return false;
+  try {
+    const registers = CodeMirror.Vim.getRegisterController();
+    registers.pushText('"', 'yank', text, false, false);
+    registers.pushText('+', 'yank', text, false, false);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}

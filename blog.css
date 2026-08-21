@@ -223,6 +223,11 @@ a { color: var(--text); }
 .post-nav a { color: var(--muted); text-decoration: none; }
 .post-nav a:hover { color: var(--secondary); }
 
+/* Older posts to the right, newer to the left, whichever of them exist. */
+.post-nav.pager { display: flex; gap: 16px; }
+.post-nav.pager .all-posts { margin: 0 auto; }
+.post-nav.pager .next { margin-left: auto; }
+
 .site-footer {
   max-width: 704px;
   margin: 64px auto 48px;

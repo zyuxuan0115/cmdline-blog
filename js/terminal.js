@@ -11,7 +11,7 @@ function commandChip(name) {
 function printBanner() {
   const line = document.createElement('div');
   line.className = 'terminal-line info';
-  line.append('Type ', commandChip('commands'), ', ', commandChip('editor commands'), ', ',
+  line.append('Type ', commandChip('commands'), ', ', commandChip('vim commands'), ', ',
               commandChip('hotkeys'), ' or ', commandChip('list'),
               ' to see what you can do next.');
   output.appendChild(line);
@@ -161,7 +161,10 @@ const COMMANDS = {
     await openListSidebar(args.trim());
   },
 
-  hash(args) {
+  // The hash is printed and also put where it can be pasted: the system
+  // clipboard for anywhere outside the app, and vim's unnamed register so `p`
+  // drops it into an open document.
+  async hash(args) {
     if (!requireLogin()) return;
     const arg = args.trim();
     if (!/^\d+$/.test(arg)) { print('Usage: hash <index>', 'error'); return; }
@@ -174,7 +177,15 @@ const COMMANDS = {
       print(`Error: index ${idx} not in last list.`, 'error');
       return;
     }
-    print(lastListedDocs[idx - 1].filename, 'info');
+    const filename = lastListedDocs[idx - 1].filename;
+    print(filename, 'info');
+
+    const copied = await copyToClipboard(filename);
+    const yanked = setVimRegister(filename);
+    const ways = [copied && `${modKeyName()}+V`, yanked && 'p in vim'].filter(Boolean);
+    print(ways.length ? `Copied — paste with ${ways.join(' or ')}.`
+                      : 'Could not copy it to the clipboard.',
+          ways.length ? 'muted' : 'error');
   },
 
   // Open a user's published posts in the plain-text blog reader (blog.html),
@@ -345,11 +356,11 @@ const COMMANDS = {
   inbox(args) { COMMANDS.messages(args); },
 
   // Vim reference for the document editors, in its own sidebar view.
-  editor(args) {
+  vim(args) {
     const rest = args.trim();
     if (rest === 'commands close') { closeHelpSidebar(); return; }
-    if (rest === 'commands' || rest === '') { openEditorSidebar(); return; }
-    print('Usage: editor commands  |  editor commands close', 'error');
+    if (rest === 'commands' || rest === '') { openVimSidebar(); return; }
+    print('Usage: vim commands  |  vim commands close', 'error');
   },
 
   hotkeys(args) {

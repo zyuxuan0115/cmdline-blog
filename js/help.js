@@ -14,7 +14,7 @@ const HELP_SECTIONS = [
       ['list private',                   'your private docs only'],
       ['list shared',                    'your + friends’ shared docs'],
       ['list close',                     'close the list sidebar'],
-      ['hash &lt;index&gt;',                'print the hash of a document'],
+      ['hash &lt;index&gt;',                'print a document’s hash, and copy it to the clipboard'],
       ['blog &lt;username&gt;',            'read a user’s published posts in a new tab'],
       ['blog',                           'read your own published posts'],
       ['blog --name &lt;title&gt;',        'title your own blog (--name \'\' resets it)'],
@@ -67,16 +67,16 @@ const HELP_SECTIONS = [
       ['hotkeys close', 'close the hotkeys sidebar'],
       ['commands',       'open this sidebar'],
       ['commands close', 'close this sidebar'],
-      ['editor commands',       'show the vim editor commands'],
-      ['editor commands close', 'close the editor commands sidebar'],
+      ['vim commands',       'show the vim command reference'],
+      ['vim commands close', 'close the vim commands sidebar'],
     ]
   }
 ];
 
 // Vim commands for the document editors, shown in their own sidebar view by
-// the  editor commands  command. Kept apart from HELP_SECTIONS so the Commands
+// the  vim commands  command. Kept apart from HELP_SECTIONS so the Commands
 // sidebar stays about the terminal.
-const EDITOR_SECTIONS = [
+const VIM_SECTIONS = [
   {
     title: 'Modes',
     entries: [
@@ -154,7 +154,7 @@ const HOTKEYS = [
 const helpSidebar = document.getElementById('help-sidebar');
 const helpContent = document.getElementById('help-sidebar-content');
 const sidebarTitle = document.getElementById('help-sidebar-title');
-let currentSidebarView = null; // 'help', 'list', 'hotkeys', 'messages', or 'editor'
+let currentSidebarView = null; // 'help', 'list', 'hotkeys', 'messages', or 'vim'
 let lastListedDocs = []; // docs from the most recent  list  command, in display order
 let lastListFilter = ''; // '', 'public', 'mywork', or 'private'
 let lastSidebarView = null; // last view shown before it was closed, for Ctrl+Z reopen
@@ -239,8 +239,8 @@ function openHotkeysSidebar() {
   print('Hotkeys opened on the right.', 'muted');
 }
 
-function buildEditorHTML() {
-  return EDITOR_SECTIONS.map(section => `
+function buildVimHTML() {
+  return VIM_SECTIONS.map(section => `
     <div class="help-section">
       <div class="help-section-title">${section.title}</div>
       ${section.entries.map(([cmd, desc]) =>
@@ -250,9 +250,9 @@ function buildEditorHTML() {
   `).join('');
 }
 
-function openEditorSidebar() {
-  swapSidebarContent(buildEditorHTML(), 'editor', 'Editor Commands');
-  print('Editor commands opened on the right.', 'muted');
+function openVimSidebar() {
+  swapSidebarContent(buildVimHTML(), 'vim', 'Vim Commands');
+  print('Vim commands opened on the right.', 'muted');
 }
 
 function openHelpSidebar() {
@@ -272,7 +272,7 @@ function reopenSidebar() {
   if (lastSidebarView === 'hotkeys') { openHotkeysSidebar(); return true; }
   if (lastSidebarView === 'list')    { openListSidebar(lastListFilter); return true; }
   if (lastSidebarView === 'messages') { openMessagesSidebar(); return true; }
-  if (lastSidebarView === 'editor')  { openEditorSidebar();  return true; }
+  if (lastSidebarView === 'vim')     { openVimSidebar();     return true; }
   return false;
 }
 
