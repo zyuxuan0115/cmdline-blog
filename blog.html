@@ -12,7 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <link rel="stylesheet" href="blog.css?v=3">
+  <link rel="stylesheet" href="blog.css?v=4">
 </head>
 <body>
   <div class="page">
@@ -20,6 +20,10 @@
     <header class="site-header">
       <h1 id="blog-author">&nbsp;</h1>
       <p id="blog-sub" class="site-sub"></p>
+      <form id="blog-search" class="site-search" role="search" hidden>
+        <input type="search" id="blog-search-input" name="q" autocomplete="off"
+               placeholder="Search these posts" aria-label="Search these posts">
+      </form>
     </header>
 
     <main id="blog-main">

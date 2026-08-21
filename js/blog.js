@@ -4,6 +4,7 @@
 //
 //   blog.html?u=<username>            → index of that user's posts
 //   blog.html?u=<username>&t=<tag>    → that user's posts carrying one tag
+//   blog.html?u=<username>&q=<words>  → that user's posts containing the words
 //   blog.html?u=<username>&page=<n>   → a later page of that index
 //   blog.html?u=<username>&p=<hash>   → a single post
 //
@@ -15,7 +16,11 @@ const params   = new URLSearchParams(location.search);
 const username = (params.get('u') || '').trim();
 const postHash = (params.get('p') || '').trim();
 const tagFilter = (params.get('t') || '').trim();   // set by clicking a tag
+const query     = (params.get('q') || '').trim();   // set by the search box
 const pageParam = Math.max(1, parseInt(params.get('page'), 10) || 1);
+
+// A post matches when it contains every word searched for, anywhere.
+const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
 
 const HASH_RE = /^[a-f0-9]{64}$/;
 
@@ -91,11 +96,21 @@ function postUrl(doc) {
 
 // The index of one author's posts, optionally narrowed to a single tag and to
 // one page of it. Page 1 is the bare URL, so links to a blog stay tidy.
-function indexUrl(owner = username, tag = '', page = 1) {
-  let q = `?u=${encodeURIComponent(owner)}`;
-  if (tag)      q += `&t=${encodeURIComponent(tag)}`;
-  if (page > 1) q += `&page=${page}`;
-  return q;
+function indexUrl(owner = username, tag = '', page = 1, words = '') {
+  let url = `?u=${encodeURIComponent(owner)}`;
+  if (tag)      url += `&t=${encodeURIComponent(tag)}`;
+  if (words)    url += `&q=${encodeURIComponent(words)}`;
+  if (page > 1) url += `&page=${page}`;
+  return url;
+}
+
+// Search covers what a reader can see of a post: its title, its body and its
+// tags. Everything is lowercased, so the search is case-insensitive.
+function docMatches(doc) {
+  if (!terms.length) return true;
+  const haystack = [doc.title || '', doc.content || '', ...(doc.tags || [])]
+    .join('\n').toLowerCase();
+  return terms.every(term => haystack.includes(term));
 }
 
 // Tags stay as their author typed them, so matching ignores case.
@@ -176,13 +191,17 @@ async function fetchPosts(uid, viewer) {
 
 // ─── Views ────────────────────────────────────────────────────────────────────
 
-// The index, either of everything this author published or — when a tag was
-// clicked — of just the posts carrying that tag, fifteen posts at a time.
+// The index of this author's posts, narrowed by the tag that was clicked and
+// by whatever was searched for, fifteen posts at a time.
 function renderIndex(user, posts) {
   const title = siteTitle(user);
-  const shown = tagFilter ? posts.filter(doc => docHasTag(doc, tagFilter)) : posts;
-  document.title = tagFilter ? `#${tagFilter} — ${title}` : `${title} — CmdLine Blog`;
+  const shown = posts.filter(doc =>
+    (!tagFilter || docHasTag(doc, tagFilter)) && docMatches(doc));
+
+  const label = [tagFilter ? `#${tagFilter}` : '', query ? `“${query}”` : ''].filter(Boolean).join(' ');
+  document.title = label ? `${label} — ${title}` : `${title} — CmdLine Blog`;
   authorEl.textContent = title;
+  setupSearch(user.username);
 
   // A page number past the end (a stale link, a hand-typed URL) shows the last
   // page rather than an empty one.
@@ -193,21 +212,27 @@ function renderIndex(user, posts) {
   // A titled blog still names its author underneath — that name is what the
   // terminal's `blog <username>` and this page's URL use.
   const by = user.blogName ? ` · by ${user.username}` : '';
-  const count = shown.length ? `${shown.length} post${shown.length === 1 ? '' : 's'}` : 'No posts';
   const where = pageCount > 1 ? ` · page ${page} of ${pageCount}` : '';
-  if (tagFilter) {
+  const count = shown.length ? `${shown.length} post${shown.length === 1 ? '' : 's'}` : 'No posts';
+
+  if (tagFilter || query) {
     // The way back to the whole blog is the link under the last post, so the
     // header stays a plain description of what's being shown.
-    subEl.innerHTML = `${escapeHtml(count)} <span class="tag-current">#${escapeHtml(tagFilter)}</span>${escapeHtml(by + where)}`;
+    const parts = [escapeHtml(count)];
+    if (tagFilter) parts.push(`<span class="tag-current">#${escapeHtml(tagFilter)}</span>`);
+    if (query) parts.push(`matching <span class="query-current">“${escapeHtml(query)}”</span>`);
+    subEl.innerHTML = parts.join(' ') + escapeHtml(by + where);
   } else {
     subEl.textContent = (shown.length ? count : 'No posts yet') + by + where;
   }
 
   if (!shown.length) {
-    mainEl.innerHTML = tagFilter
-      ? `<p class="empty">Nothing here is tagged #${escapeHtml(tagFilter)}.</p>`
-      : `<p class="empty">${escapeHtml(user.username)} hasn't published anything yet.</p>`;
-    if (tagFilter) mainEl.insertAdjacentHTML('beforeend', navHtml(user, page, pageCount));
+    let msg;
+    if (query)          msg = `Nothing here matches “${escapeHtml(query)}”.`;
+    else if (tagFilter) msg = `Nothing here is tagged #${escapeHtml(tagFilter)}.`;
+    else                msg = `${escapeHtml(user.username)} hasn't published anything yet.`;
+    mainEl.innerHTML = `<p class="empty">${msg}</p>`;
+    mainEl.insertAdjacentHTML('beforeend', navHtml(user, page, pageCount));
     return;
   }
 
@@ -233,15 +258,31 @@ function renderIndex(user, posts) {
   mainEl.insertAdjacentHTML('beforeend', navHtml(user, page, pageCount));
 }
 
-// Under the last post: the way to the neighbouring pages, and — on a tag page —
-// back to the whole blog. Empty when there is nowhere to go.
+// The search box only makes sense once we know whose posts are being searched,
+// so it stays hidden until the index renders. Submitting starts at page one,
+// keeping any tag, so you can search inside a tag as well as across the blog.
+function setupSearch(owner) {
+  const form  = document.getElementById('blog-search');
+  const input = document.getElementById('blog-search-input');
+  if (!form || !input) return;
+  form.hidden = false;
+  input.value = query;
+  form.onsubmit = e => {
+    e.preventDefault();
+    location.href = indexUrl(owner, tagFilter, 1, input.value.trim());
+  };
+}
+
+// Under the last post: the way to the neighbouring pages, and — when a tag or a
+// search is narrowing things — back to the whole blog. Empty when there is
+// nowhere to go.
 function navHtml(user, page, pageCount) {
   const link = (cls, to, text) =>
-    `<a class="${cls}" href="${escapeHtml(indexUrl(user.username, tagFilter, to))}">${text}</a>`;
+    `<a class="${cls}" href="${escapeHtml(indexUrl(user.username, tagFilter, to, query))}">${text}</a>`;
 
   const links = [];
   if (page > 1) links.push(link('prev', page - 1, '← previous'));
-  if (tagFilter) {
+  if (tagFilter || query) {
     links.push(`<a class="all-posts" href="${escapeHtml(indexUrl(user.username))}">← All posts by ${escapeHtml(user.username)}</a>`);
   }
   if (page < pageCount) links.push(link('next', page + 1, 'next →'));

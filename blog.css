@@ -67,6 +67,33 @@ a { color: var(--text); }
 
 .site-sub a { color: var(--secondary); }
 
+/* Shown on index views only, and only once the author is known. */
+.site-search {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.site-search[hidden] { display: none; }
+
+.site-search input {
+  width: 100%;
+  max-width: 320px;
+  padding: 4px 2px;
+  font-family: var(--serif);
+  font-size: 16px;
+  text-align: center;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #ddd;
+  border-radius: 0;            /* Safari rounds search fields by default */
+  -webkit-appearance: none;
+}
+
+.site-search input::placeholder { color: var(--muted); }
+.site-search input:focus { outline: none; border-bottom-color: var(--secondary); }
+
 /* ============== Entries ============== */
 
 #blog-main {
@@ -122,8 +149,8 @@ a { color: var(--text); }
   text-decoration: underline;
 }
 
-/* The tag being filtered on, shown in the header. */
-.tag-current { font-style: italic; }
+/* The tag or the words being filtered on, shown in the header. */
+.tag-current, .query-current { font-style: italic; }
 
 .badge {
   font-size: 14px;
