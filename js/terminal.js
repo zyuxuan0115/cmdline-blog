@@ -12,7 +12,7 @@ function printBanner() {
   const line = document.createElement('div');
   line.className = 'terminal-line info';
   line.append('Type ', commandChip('commands'), ', ', commandChip('editor commands'), ', ',
-              commandChip('hotkeys'), ', ', commandChip('list'),
+              commandChip('hotkeys'), ' or ', commandChip('list'),
               ' to see what you can do next.');
   output.appendChild(line);
   print('', 'muted');

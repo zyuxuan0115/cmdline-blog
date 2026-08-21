@@ -524,6 +524,12 @@ input, textarea, button, select {
 }
 
 .toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* Fixed, so the emoji in "Image" / "Public" can't make those buttons taller
+     than the plain-text ones next to them. */
+  line-height: 1.6;
   padding: 6px 10px;
   border: 2px solid #000;
   background: #2a2a4a;
@@ -548,12 +554,6 @@ input, textarea, button, select {
   height: 22px;
   background: #5a2d4d;
   margin: 0 4px;
-}
-
-.upload-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .upload-btn input[type="file"] {
@@ -658,6 +658,18 @@ input, textarea, button, select {
   outline: none;
   caret-color: #ff69b4;
 }
+
+/* The VIM button stays the plain toolbar colour whether vim is on or off —
+   the strike-through label is what says "off". */
+.vim-btn.active {
+  background: #2a2a4a;
+  color: #f8f8f8;
+  transform: none;
+  box-shadow: 2px 2px 0 #000;
+}
+.vim-btn.active:hover { background: #5a2d4d; }
+.vim-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+.vim-btn:not(.active) { text-decoration: line-through; }
 
 /* Current vim mode, shown in the toolbar */
 .vim-mode {
