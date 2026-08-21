@@ -259,14 +259,47 @@ function renderIndex(user, posts) {
 }
 
 // The search box only makes sense once we know whose posts are being searched,
-// so it stays hidden until the index renders. Submitting starts at page one,
-// keeping any tag, so you can search inside a tag as well as across the blog.
+// so it stays hidden until the index renders. It shows as a magnifying glass
+// that opens into a field, already open when a search is what's on screen.
+// Submitting starts at page one, keeping any tag, so you can search inside a
+// tag as well as across the blog.
 function setupSearch(owner) {
-  const form  = document.getElementById('blog-search');
-  const input = document.getElementById('blog-search-input');
-  if (!form || !input) return;
+  const form   = document.getElementById('blog-search');
+  const input  = document.getElementById('blog-search-input');
+  const toggle = document.getElementById('blog-search-toggle');
+  if (!form || !input || !toggle) return;
+
+  const setOpen = open => {
+    form.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+  };
+
   form.hidden = false;
   input.value = query;
+  setOpen(!!query);
+
+  // Keep the focus where it is while the glass is clicked, so the blur below
+  // can't collapse the field a moment before the click is handled.
+  toggle.onmousedown = e => e.preventDefault();
+
+  // The glass opens the field, then doubles as the search button; clicking it
+  // with nothing typed closes the field again.
+  toggle.onclick = () => {
+    if (!form.classList.contains('open')) { setOpen(true); input.focus(); return; }
+    if (input.value.trim()) { form.requestSubmit(); return; }
+    setOpen(false);
+  };
+
+  // An empty field left behind collapses, so the header goes back to being a
+  // line of text — unless a search is what's on screen, where the field belongs
+  // open next to the results it produced.
+  input.onblur = () => { if (!input.value.trim() && !query) setOpen(false); };
+  input.onkeydown = e => {
+    if (e.key !== 'Escape') return;
+    input.value = '';
+    setOpen(false);
+  };
+
   form.onsubmit = e => {
     e.preventDefault();
     location.href = indexUrl(owner, tagFilter, 1, input.value.trim());

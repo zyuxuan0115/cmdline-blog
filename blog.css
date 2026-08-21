@@ -59,40 +59,85 @@ a { color: var(--text); }
   color: var(--text);
 }
 
-.site-sub {
+/* The line under the title: what's being shown, then the search icon. */
+.site-subline {
   margin-top: 9px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.site-sub {
   font-size: 17.6px;
   color: var(--secondary);
 }
 
 .site-sub a { color: var(--secondary); }
 
-/* Shown on index views only, and only once the author is known. */
+/* Shown on index views only, and only once the author is known. Collapsed to
+   its magnifying glass until clicked. */
 .site-search {
-  margin-top: 20px;
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 6px;
 }
 
 .site-search[hidden] { display: none; }
 
-.site-search input {
-  width: 100%;
-  max-width: 320px;
-  padding: 4px 2px;
+.search-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.search-toggle:hover,
+.site-search.open .search-toggle { color: var(--secondary); }
+
+.search-toggle svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.search-field {
+  width: 0;
+  padding: 0;
+  opacity: 0;
   font-family: var(--serif);
   font-size: 16px;
-  text-align: center;
   color: var(--text);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid transparent;
   border-radius: 0;            /* Safari rounds search fields by default */
   -webkit-appearance: none;
+  transition: width 0.25s ease, opacity 0.25s ease;
 }
 
-.site-search input::placeholder { color: var(--muted); }
-.site-search input:focus { outline: none; border-bottom-color: var(--secondary); }
+.site-search.open .search-field {
+  width: 200px;
+  padding: 0 2px 2px;
+  opacity: 1;
+  border-bottom-color: #ddd;
+}
+
+/* Chrome draws a blue ✕ inside search fields; Escape and the glass already
+   clear and close this one. */
+.search-field::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.search-field::placeholder { color: var(--muted); }
+.search-field:focus { outline: none; border-bottom-color: var(--secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .search-field { transition: none; }
+}
 
 /* ============== Entries ============== */
 

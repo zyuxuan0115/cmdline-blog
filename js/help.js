@@ -174,7 +174,11 @@ function buildDocEntry(doc, isMine, index) {
   const { filename, title, visibility, tags, updated_at, author_name } = doc;
   const displayTitle = title ? `<code>${title}</code>` : `<code>&lt;untitled&gt;</code>`;
   const indexStr = index != null ? `<span style="color:#556677">${index}.</span> ` : '';
-  const open = isMine && docs[filename] ? ' <span style="color:#ffadd6">[open]</span>' : '';
+  // The marker is always rendered for your own documents, shown or hidden by
+  // refreshOpenMarkers() as windows come and go.
+  const open = isMine
+    ? ` <span class="open-badge" data-filename="${filename}" style="color:#ffadd6"${docs[filename] ? '' : ' hidden'}>[open]</span>`
+    : '';
   const vis = visibility === 'public' ? ' <span style="color:#88aaff">[public]</span>'
             : visibility === 'shared' ? ' <span style="color:#88ff88">[shared]</span>'
             : ' <span style="color:#556677">[private]</span>';
@@ -184,6 +188,14 @@ function buildDocEntry(doc, isMine, index) {
   const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
   const clickAttr = index != null ? ` style="cursor:pointer" onclick="runCommand('open ${index}')"` : '';
   return `<div class="help-entry"${clickAttr}>${indexStr}${displayTitle}${open}${vis}${author}${tagStr}${timeStr}${authorId}</div>`;
+}
+
+// A window opening or closing makes the [open] markers stale. The sidebar is
+// told about it rather than rebuilt, which would refetch and re-animate.
+function refreshOpenMarkers() {
+  helpContent.querySelectorAll('.open-badge').forEach(badge => {
+    badge.hidden = !docs[badge.dataset.filename];
+  });
 }
 
 function buildListHTML(documents, sectionTitle, isMine) {

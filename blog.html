@@ -12,18 +12,27 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <link rel="stylesheet" href="blog.css?v=4">
+  <link rel="stylesheet" href="blog.css?v=6">
 </head>
 <body>
   <div class="page">
     <a class="back-link" href="index.html">&larr; terminal</a>
     <header class="site-header">
       <h1 id="blog-author">&nbsp;</h1>
-      <p id="blog-sub" class="site-sub"></p>
-      <form id="blog-search" class="site-search" role="search" hidden>
-        <input type="search" id="blog-search-input" name="q" autocomplete="off"
-               placeholder="Search these posts" aria-label="Search these posts">
-      </form>
+      <div class="site-subline">
+        <p id="blog-sub" class="site-sub"></p>
+        <form id="blog-search" class="site-search" role="search" hidden>
+          <button type="button" id="blog-search-toggle" class="search-toggle"
+                  aria-label="Search these posts" aria-expanded="false">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <circle cx="8.5" cy="8.5" r="5.5"></circle>
+              <line x1="12.6" y1="12.6" x2="17.5" y2="17.5"></line>
+            </svg>
+          </button>
+          <input type="search" id="blog-search-input" class="search-field" name="q"
+                 autocomplete="off" placeholder="Search these posts" aria-label="Search these posts">
+        </form>
+      </div>
     </header>
 
     <main id="blog-main">

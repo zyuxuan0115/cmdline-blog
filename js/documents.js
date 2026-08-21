@@ -13,6 +13,7 @@ function openDocument(name, content = '', visibility = 'private', title = '', in
   // CodeMirror measures itself, so it needs a nudge once the window is on-screen.
   if (win._editor) win._editor.refresh();
   updateHint();
+  refreshOpenMarkers();
 }
 
 function closeDocument(name) {
@@ -20,6 +21,7 @@ function closeDocument(name) {
   win.remove();
   delete docs[name];
   updateHint();
+  refreshOpenMarkers();
 }
 
 function focusWindow(win) {
