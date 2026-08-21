@@ -10,8 +10,8 @@
 //
 // It reads Firestore directly with the same rules as the app: public posts are
 // visible to everyone, and a signed-in friend of the author also sees their
-// `shared` posts. A private post is only ever shown to the person who wrote it,
-// and only by its own link — nobody's index lists one.
+// `shared` posts. A private post is only ever shown to the person who wrote it —
+// on their own index, and by its own link.
 
 const params   = new URLSearchParams(location.search);
 const username = (params.get('u') || '').trim();
@@ -173,8 +173,10 @@ async function resolveUsername(name) {
 }
 
 // Public posts always; `shared` ones too when the viewer is allowed to see them
-// (the author themselves, or one of their friends). The shared query is
-// best-effort — a stranger's read is denied by the rules, which is not an error.
+// (the author themselves, or one of their friends); and private ones when the
+// author is the one looking, so their own index shows everything they've
+// written. The shared query is best-effort — a stranger's read is denied by the
+// rules, which is not an error.
 async function fetchPosts(uid, viewer) {
   const col = _db.collection('documents');
   const byVisibility = vis => col
@@ -187,6 +189,7 @@ async function fetchPosts(uid, viewer) {
   const posts = await byVisibility('public');
   if (viewer) {
     try { posts.push(...await byVisibility('shared')); } catch (_) { /* not a friend */ }
+    if (viewer.uid === uid) posts.push(...await byVisibility('private'));
   }
   return posts.sort((a, b) =>
     new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0));
