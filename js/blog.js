@@ -10,7 +10,8 @@
 //
 // It reads Firestore directly with the same rules as the app: public posts are
 // visible to everyone, and a signed-in friend of the author also sees their
-// `shared` posts. Private posts never appear here.
+// `shared` posts. A private post is only ever shown to the person who wrote it,
+// and only by its own link — nobody's index lists one.
 
 const params   = new URLSearchParams(location.search);
 const username = (params.get('u') || '').trim();
@@ -123,7 +124,9 @@ function docHasTag(doc, tag) {
 function tagsHtml(doc, owner = username) {
   const tags = (doc.tags || []).map(t =>
     `<a class="tag" href="${escapeHtml(indexUrl(owner, t))}">#${escapeHtml(t)}</a>`).join(' ');
-  const badge = doc.visibility === 'shared' ? '<span class="badge">friends only</span>' : '';
+  const badge = doc.visibility === 'shared'  ? '<span class="badge">friends only</span>'
+             : doc.visibility === 'private' ? '<span class="badge">private</span>'
+             : '';
   if (!tags && !badge) return '';
   return `<div class="post-tags">${[tags, badge].filter(Boolean).join(' · ')}</div>`;
 }
@@ -374,16 +377,21 @@ async function main() {
       showError('That post is private.');
       return;
     }
-    if (!snap.exists || snap.data().visibility === 'private') {
+    // The rules let an author read their own private posts, so following a link
+    // to one of your own drafts works while you're signed in — everyone else is
+    // told it isn't published.
+    const doc = snap.exists ? snap.data() : null;
+    const mine = !!(doc && viewer && doc.user_id === viewer.uid);
+    if (!doc || (doc.visibility === 'private' && !mine)) {
       authorEl.textContent = username || 'CmdLine Blog';
       showError('That post does not exist, or is not published.');
       return;
     }
     // Best-effort: the author's mapping carries their blog title for the banner.
     let site = null;
-    const owner = username || snap.data().author_name || '';
+    const owner = username || doc.author_name || '';
     if (owner) { try { site = await resolveUsername(owner); } catch (_) { /* banner falls back to the author's name */ } }
-    renderPost(snap.data(), site);
+    renderPost(doc, site);
     return;
   }
 
