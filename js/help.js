@@ -159,8 +159,10 @@ let lastListedDocs = []; // docs from the most recent  list  command, in display
 let lastListFilter = ''; // '', 'public', 'mywork', or 'private'
 let lastSidebarView = null; // last view shown before it was closed, for Ctrl+Z reopen
 
-function buildHelpHTML() {
-  return HELP_SECTIONS.map(section => `
+// The commands, vim and hotkeys views are all the same thing: titled sections of
+// `code` — description pairs.
+function buildSectionsHTML(sections) {
+  return sections.map(section => `
     <div class="help-section">
       <div class="help-section-title">${section.title}</div>
       ${section.entries.map(([cmd, desc]) =>
@@ -198,14 +200,18 @@ function refreshOpenMarkers() {
   });
 }
 
-function buildListHTML(documents, sectionTitle, isMine) {
+// One section of documents. `ownership` is true or false for a list that is all
+// yours or all other people's, and 'auto' for a mixed one, where each entry is
+// checked on its own.
+function buildListHTML(documents, sectionTitle, ownership, emptyText = 'No documents found.') {
   if (documents.length === 0) {
-    return `<div class="help-section"><div class="help-section-title">${sectionTitle}</div><div class="help-entry"><span>No documents found.</span></div></div>`;
+    return `<div class="help-section"><div class="help-section-title">${sectionTitle}</div><div class="help-entry"><span>${emptyText}</span></div></div>`;
   }
+  const mine = doc => ownership === 'auto' ? doc.user_id === currentUser.uid : ownership;
   return `
     <div class="help-section">
       <div class="help-section-title">${sectionTitle} (${documents.length})</div>
-      ${documents.map((doc, i) => buildDocEntry(doc, isMine, i + 1)).join('')}
+      ${documents.map((doc, i) => buildDocEntry(doc, mine(doc), i + 1)).join('')}
     </div>
   `;
 }
@@ -235,40 +241,19 @@ function swapSidebarContent(newHTML, newView, titleText) {
   }, 200);
 }
 
-function buildHotkeysHTML() {
-  return `
-    <div class="help-section">
-      <div class="help-section-title">Keyboard Shortcuts</div>
-      ${HOTKEYS.map(([key, desc]) =>
-        `<div class="help-entry"><code>${key}</code><br><span>— ${desc}</span></div>`
-      ).join('')}
-    </div>
-  `;
-}
-
 function openHotkeysSidebar() {
-  swapSidebarContent(buildHotkeysHTML(), 'hotkeys', 'Hotkeys');
+  swapSidebarContent(buildSectionsHTML([{ title: 'Keyboard Shortcuts', entries: HOTKEYS }]),
+                     'hotkeys', 'Hotkeys');
   print('Hotkeys opened on the right.', 'muted');
 }
 
-function buildVimHTML() {
-  return VIM_SECTIONS.map(section => `
-    <div class="help-section">
-      <div class="help-section-title">${section.title}</div>
-      ${section.entries.map(([cmd, desc]) =>
-        `<div class="help-entry"><code>${cmd}</code><br><span>— ${desc}</span></div>`
-      ).join('')}
-    </div>
-  `).join('');
-}
-
 function openVimSidebar() {
-  swapSidebarContent(buildVimHTML(), 'vim', 'Vim Commands');
+  swapSidebarContent(buildSectionsHTML(VIM_SECTIONS), 'vim', 'Vim Commands');
   print('Vim commands opened on the right.', 'muted');
 }
 
 function openHelpSidebar() {
-  swapSidebarContent(buildHelpHTML(), 'help', 'Commands');
+  swapSidebarContent(buildSectionsHTML(HELP_SECTIONS), 'help', 'Commands');
   print('Help opened on the right.', 'muted');
 }
 
@@ -307,106 +292,85 @@ async function fetchFriendsSharedDocs() {
   }
 }
 
+// The list sidebar's five views. Each one says what to call it, how to fetch
+// its documents, and whether the entries are the user's own — the rendering and
+// the error handling are the same for all of them.
+const LIST_VIEWS = {
+  public: {
+    title: 'Public Documents',
+    ownership: false,
+    load: () => byDocs(col => col.where('visibility', '==', 'public')),
+  },
+  mywork: {
+    title: 'My Documents',
+    ownership: true,
+    load: () => byDocs(col => col.where('user_id', '==', currentUser.uid)),
+  },
+  private: {
+    title: 'Private Documents',
+    ownership: true,
+    load: () => byDocs(col => col.where('user_id', '==', currentUser.uid)
+                                 .where('visibility', '==', 'private')),
+  },
+  shared: {
+    title: 'Shared Documents',
+    ownership: 'auto',
+    empty: 'No shared documents.',
+    // Your shared docs plus your friends'.
+    load: async () => newestFirst([
+      ...await byDocs(col => col.where('user_id', '==', currentUser.uid)
+                                .where('visibility', '==', 'shared')),
+      ...await fetchFriendsSharedDocs(),
+    ]),
+  },
+  // The default: everything the user can see — all their own docs whatever the
+  // visibility, every public doc, and friends' shared docs. Own public docs come
+  // back from two of those queries, so entries are de-duplicated by filename.
+  '': {
+    title: 'All Documents',
+    ownership: 'auto',
+    load: async () => {
+      const mine        = await byDocs(col => col.where('user_id', '==', currentUser.uid));
+      const allPublic   = await byDocs(col => col.where('visibility', '==', 'public'));
+      const friendsShared = await fetchFriendsSharedDocs();
+      const byName = new Map();
+      [...mine, ...allPublic, ...friendsShared]
+        .forEach(d => { if (d && d.filename) byName.set(d.filename, d); });
+      return newestFirst([...byName.values()]);
+    },
+  },
+};
+
+// Every list query is the documents collection, narrowed, newest edit first.
+function byDocs(narrow) {
+  return narrow(_db.collection('documents'))
+    .orderBy('updated_at', 'desc')
+    .get()
+    .then(snap => snap.docs.map(d => d.data()));
+}
+
+function newestFirst(documents) {
+  return documents.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+}
+
 async function openListSidebar(filter) {
   lastListFilter = filter;
-  const fields = 'filename, title, visibility, tags, updated_at, author_name, user_id';
-  let html = '';
-  let title = 'All Documents';
+  const view = LIST_VIEWS[filter] || LIST_VIEWS[''];
 
-  // Firestore returns full document data; `fields` is unused but kept for clarity.
-  const col = _db.collection('documents');
-  const toData = snap => snap.docs.map(d => d.data());
+  let documents;
+  try { documents = await view.load(); }
+  catch (e) { print(`Error: ${e.message}`, 'error'); return; }
 
-  if (filter === 'public') {
-    // All public posts from everyone
-    let data;
-    try { data = toData(await col.where('visibility', '==', 'public').orderBy('updated_at', 'desc').get()); }
-    catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    title = 'Public Documents';
-    lastListedDocs = data || [];
-    html = buildListHTML(lastListedDocs, title, false);
-  } else if (filter === 'mywork') {
-    // All of current user's posts (public + private)
-    let data;
-    try { data = toData(await col.where('user_id', '==', currentUser.uid).orderBy('updated_at', 'desc').get()); }
-    catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    title = 'My Documents';
-    lastListedDocs = data || [];
-    html = buildListHTML(lastListedDocs, title, true);
-  } else if (filter === 'private') {
-    // Current user's private posts only
-    let data;
-    try { data = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'private').orderBy('updated_at', 'desc').get()); }
-    catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    title = 'Private Documents';
-    lastListedDocs = data || [];
-    html = buildListHTML(lastListedDocs, title, true);
-  } else if (filter === 'shared') {
-    // Your shared docs + your friends' shared docs.
-    let all = [];
-    try {
-      const mine = toData(await col.where('user_id', '==', currentUser.uid).where('visibility', '==', 'shared').orderBy('updated_at', 'desc').get());
-      const friendsShared = await fetchFriendsSharedDocs();
-      all = [...mine, ...friendsShared].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
-    } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    title = 'Shared Documents';
-    lastListedDocs = all;
-    if (all.length === 0) {
-      html = `<div class="help-section"><div class="help-section-title">${title}</div><div class="help-entry"><span>No shared documents.</span></div></div>`;
-    } else {
-      html = `
-        <div class="help-section">
-          <div class="help-section-title">${title} (${all.length})</div>
-          ${all.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.uid, i + 1)).join('')}
-        </div>
-      `;
-    }
-  } else {
-    // Default: everything the user can see — all their own docs (any visibility),
-    // every public doc, and friends' shared docs. Sorted newest first.
-    let myDocs, allPublic, friendsShared;
-    try {
-      myDocs = toData(await col.where('user_id', '==', currentUser.uid).orderBy('updated_at', 'desc').get());
-      allPublic = toData(await col.where('visibility', '==', 'public').orderBy('updated_at', 'desc').get());
-      friendsShared = await fetchFriendsSharedDocs();
-    } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
-    // Merge, de-duplicate by filename (own public docs also appear in allPublic),
-    // and sort by updated_at descending.
-    const byName = new Map();
-    [...myDocs, ...allPublic, ...friendsShared].forEach(d => { if (d && d.filename) byName.set(d.filename, d); });
-    const all = [...byName.values()].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
-    title = 'All Documents';
-    lastListedDocs = all;
-    html = buildListHTML(all, title, false).replace(
-      // For own docs, re-render entries to make them clickable
-      new RegExp('', ''), ''
-    );
-    // Re-build with per-entry ownership check
-    if (all.length === 0) {
-      html = `<div class="help-section"><div class="help-section-title">${title}</div><div class="help-entry"><span>No documents found.</span></div></div>`;
-    } else {
-      html = `
-        <div class="help-section">
-          <div class="help-section-title">${title} (${all.length})</div>
-          ${all.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.uid, i + 1)).join('')}
-        </div>
-      `;
-    }
-  }
-
-  swapSidebarContent(html, 'list', title);
+  lastListedDocs = documents;
+  swapSidebarContent(buildListHTML(documents, view.title, view.ownership, view.empty),
+                     'list', view.title);
   print('File list opened on the right.', 'muted');
 }
 
+// Re-render the list in place, after a document it shows has changed.
 function renderListSidebar() {
   if (currentSidebarView !== 'list') return;
-  const sectionTitle = sidebarTitle.textContent;
-  helpContent.innerHTML = lastListedDocs.length === 0
-    ? `<div class="help-section"><div class="help-section-title">${sectionTitle}</div><div class="help-entry"><span>No documents found.</span></div></div>`
-    : `<div class="help-section">
-         <div class="help-section-title">${sectionTitle} (${lastListedDocs.length})</div>
-         ${lastListedDocs.map((doc, i) => buildDocEntry(doc, doc.user_id === currentUser.uid, i + 1)).join('')}
-       </div>`;
+  helpContent.innerHTML = buildListHTML(lastListedDocs, sidebarTitle.textContent, 'auto');
 }
 
 function updateListSidebarDoc(filename, patch) {

@@ -3,13 +3,19 @@
 // filename doubles as the Firestore document id. We still store `user_id` on
 // each doc for ownership checks and queries.
 
+// Every document read and write goes through here, so the collection name and
+// the filename-as-id convention are stated once.
+function docRef(filename) {
+  return _db.collection('documents').doc(filename);
+}
+
 async function dbFileExists(name) {
-  const snap = await _db.collection('documents').doc(name).get();
+  const snap = await docRef(name).get();
   return snap.exists && snap.data().user_id === currentUser.uid;
 }
 
 async function dbSetVisibility(name, vis) {
-  await _db.collection('documents').doc(name).update({ visibility: vis });
+  await docRef(name).update({ visibility: vis });
   if (docs[name]) { docs[name].visibility = vis; docs[name].win._refreshVisBtn(); }
   updateListSidebarDoc(name, { visibility: vis });
 }
@@ -41,27 +47,29 @@ async function dbSetBlogName(name) {
 // ─── Tag Helpers (Firestore) ──────────────────────────────────────────────────
 
 async function getTags(filename) {
-  const snap = await _db.collection('documents').doc(filename).get();
+  const snap = await docRef(filename).get();
   return (snap.exists && snap.data().tags) || [];
+}
+
+// Both tag edits end the same way: store the new list, then refresh wherever it
+// is on show — the document's own toolbar and the list sidebar.
+async function saveTags(filename, tags) {
+  await docRef(filename).update({ tags });
+  if (docs[filename]) docs[filename].win._refreshTagBar();
+  updateListSidebarDoc(filename, { tags });
 }
 
 async function addFileTag(filename, tag) {
   const tags = await getTags(filename);
   if (tags.includes(tag)) return false;
-  const newTags = [...tags, tag];
-  await _db.collection('documents').doc(filename).update({ tags: newTags });
-  if (docs[filename]) docs[filename].win._refreshTagBar();
-  updateListSidebarDoc(filename, { tags: newTags });
+  await saveTags(filename, [...tags, tag]);
   return true;
 }
 
 async function removeFileTag(filename, tag) {
   const tags = await getTags(filename);
   if (!tags.includes(tag)) return false;
-  const newTags = tags.filter(t => t !== tag);
-  await _db.collection('documents').doc(filename).update({ tags: newTags });
-  if (docs[filename]) docs[filename].win._refreshTagBar();
-  updateListSidebarDoc(filename, { tags: newTags });
+  await saveTags(filename, tags.filter(t => t !== tag));
   return true;
 }
 

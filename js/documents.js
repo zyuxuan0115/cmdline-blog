@@ -24,6 +24,12 @@ function closeDocument(name) {
   refreshOpenMarkers();
 }
 
+// Someone else's document is keyed by author, so it can't collide with a
+// document of your own that happens to have the same hash.
+function docKeyFor(filename, authorName, isMine) {
+  return isMine ? filename : `${authorName || 'unknown'}/${filename}`;
+}
+
 function focusWindow(win) {
   document.querySelectorAll('.doc-window').forEach(w => w.classList.remove('focused'));
   win.classList.add('focused');
@@ -66,7 +72,7 @@ async function openByHash(hash) {
 
   let snap;
   try {
-    snap = await _db.collection('documents').doc(hash).get();
+    snap = await docRef(hash).get();
   } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
   const d = snap.exists ? snap.data() : null;
 
@@ -80,7 +86,7 @@ async function openByHash(hash) {
   // Foreign doc, read-only. The get() above already succeeded, so the rules
   // allowed it — public, or shared with us because we're friends.
   if (d && (d.visibility === 'public' || d.visibility === 'shared')) {
-    const key = `${d.author_name || 'unknown'}/${hash}`;
+    const key = docKeyFor(hash, d.author_name, false);
     openDocument(key, d.content, d.visibility, d.title || '', 'preview', true, d.tags || []);
     print(`Opened: ${d.title || key} (read-only)`, 'success');
     return;
@@ -198,7 +204,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
       clearTimeout(titleSaveTimer);
       titleSaveTimer = setTimeout(() => {
         const newTitle = titleInput.value;
-        _db.collection('documents').doc(name)
+        docRef(name)
           .update({ title: newTitle })
           .then(() => {
             updateListSidebarDoc(name, { title: newTitle });
@@ -370,18 +376,23 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   // Mode toggle
   let mode = initialMode;
 
+  // The controls that only make sense while editing; preview keeps just the
+  // tags and the tabs.
+  function showEditingTools(show) {
+    [uploadLabel, visBtn, vimBtn, vimBadge].forEach(el => {
+      el.style.display = show ? '' : 'none';
+    });
+    titleInput.readOnly = !show;
+    win.classList.toggle('preview-mode', !show);
+  }
+
   function switchToEdit() {
     mode = 'edit';
     ed.show();
     preview.classList.remove('visible');
     btnEdit.classList.add('active');
     btnPreview.classList.remove('active');
-    uploadLabel.style.display = '';
-    visBtn.style.display = '';
-    vimBtn.style.display = '';
-    vimBadge.style.display = '';
-    titleInput.readOnly = false;
-    win.classList.remove('preview-mode');
+    showEditingTools(true);
     ed.focusNormal();
   }
 
@@ -393,12 +404,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
     preview.classList.add('visible');
     btnPreview.classList.add('active');
     btnEdit.classList.remove('active');
-    uploadLabel.style.display = 'none';
-    visBtn.style.display = 'none';
-    vimBtn.style.display = 'none';
-    vimBadge.style.display = 'none';
-    titleInput.readOnly = true;
-    win.classList.add('preview-mode');
+    showEditingTools(false);
   }
 
   // Expose the edit switcher so Ctrl+` can flip an owned doc into edit mode,
@@ -414,7 +420,7 @@ function buildWindow(name, initialContent = '', initialVisibility = 'private', i
   function saveNow() {
     clearTimeout(saveTimer);
     savedIndicator.textContent = 'saving…';
-    return _db.collection('documents').doc(name)
+    return docRef(name)
       .update({ content: ed.getValue(), updated_at: new Date().toISOString() })
       .then(() => { savedIndicator.textContent = 'saved ✓'; })
       .catch(() => { savedIndicator.textContent = 'save failed ✗'; });

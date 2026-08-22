@@ -20,21 +20,55 @@ function printBanner() {
 
 // ─── Command parsing ──────────────────────────────────────────────────────────
 
+// Resolve a position in the last  list  to the document it names. Returns the
+// entry, or null after printing why it couldn't be done — `notANumber` is the
+// complaint about a non-numeric argument, which each command words its own way.
+function listEntry(value, notANumber) {
+  if (!/^\d+$/.test(value)) { print(notANumber, 'error'); return null; }
+  if (currentSidebarView !== 'list') {
+    print('Error: list sidebar is not open. Run  list  first.', 'error'); return null;
+  }
+  const idx = parseInt(value, 10);
+  if (idx < 1 || idx > lastListedDocs.length) {
+    print(`Error: index ${idx} not in last list.`, 'error'); return null;
+  }
+  return lastListedDocs[idx - 1];
+}
+
 // Resolve a `-h <hash>` or `-i <index>` reference to a filename.
 // Returns the filename, or null after printing an error.
 function resolveDocRef(flag, value) {
-  if (flag === '-i') {
-    if (!/^\d+$/.test(value)) { print('Error: index must be a number.', 'error'); return null; }
-    if (currentSidebarView !== 'list') {
-      print('Error: list sidebar is not open. Run  list  first.', 'error'); return null;
-    }
-    const idx = parseInt(value, 10);
-    if (idx < 1 || idx > lastListedDocs.length) {
-      print(`Error: index ${idx} not in last list.`, 'error'); return null;
-    }
-    return lastListedDocs[idx - 1].filename;
+  if (flag !== '-i') return value;   // -h <hash>
+  const entry = listEntry(value, 'Error: index must be a number.');
+  return entry && entry.filename;
+}
+
+// The same reference, checked against what actually exists. Open documents
+// count without a round trip.
+async function resolveExistingDoc(flag, value) {
+  const filename = resolveDocRef(flag, value);
+  if (!filename) return null;
+  if (!docs[filename] && !await dbFileExists(filename)) {
+    print(`Error: "${filename}" does not exist.`, 'error'); return null;
   }
-  return value; // -h <hash>
+  return filename;
+}
+
+// publish / share / unpublish differ only in the visibility they set and in
+// what they report afterwards.
+function visibilityCommand(name, visibility, outcome) {
+  return async function (args) {
+    if (!requireLogin()) return;
+    const parts = args.trim().split(/\s+/);
+    const flag = parts[0];
+    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
+      print(`Usage: ${name} -h <hash>  |  ${name} -i <index>`, 'error'); return;
+    }
+    const filename = await resolveExistingDoc(flag, parts[1]);
+    if (!filename) return;
+    await dbSetVisibility(filename, visibility);
+    print(`"${filename}" ${outcome}`, 'success');
+  };
 }
 
 const COMMANDS = {
@@ -63,7 +97,7 @@ const COMMANDS = {
     const authorName = currentUser.displayName || currentUser.email;
     const nowIso = new Date().toISOString();
     try {
-      await _db.collection('documents').doc(filename).set({
+      await docRef(filename).set({
         user_id: currentUser.uid, filename, content: '', visibility: vis, title,
         author_name: authorName, updated_at: nowIso, created_at: nowIso,
       });
@@ -83,20 +117,10 @@ const COMMANDS = {
 
   async open(args) {
     if (!requireLogin()) return;
-    const arg = args.trim();
-    if (!/^\d+$/.test(arg)) { print('Usage: open <index>', 'error'); return; }
-    if (currentSidebarView !== 'list') {
-      print('Error: list sidebar is not open. Run  list  first.', 'error');
-      return;
-    }
-    const idx = parseInt(arg, 10);
-    if (idx < 1 || idx > lastListedDocs.length) {
-      print(`Error: index ${idx} not in last list.`, 'error');
-      return;
-    }
-    const entry = lastListedDocs[idx - 1];
+    const entry = listEntry(args.trim(), 'Usage: open <index>');
+    if (!entry) return;
     const isMine = entry.user_id === currentUser.uid;
-    const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
+    const key = docKeyFor(entry.filename, entry.author_name, isMine);
     if (docs[key]) {
       focusWindow(docs[key].win);
       print(`Focused: ${key}`, 'success');
@@ -104,7 +128,7 @@ const COMMANDS = {
     }
     let data;
     try {
-      const snap = await _db.collection('documents').doc(entry.filename).get();
+      const snap = await docRef(entry.filename).get();
       data = snap.exists ? snap.data() : null;
     } catch (e) { print(`Error: ${e.message}`, 'error'); return; }
     // Foreign docs are viewable only when public or shared-with-us; the get()
@@ -134,19 +158,9 @@ const COMMANDS = {
     }
 
     // Numeric → only valid while the list sidebar is showing
-    if (!/^\d+$/.test(arg)) { print('Usage: close [<index>]', 'error'); return; }
-    if (currentSidebarView !== 'list') {
-      print('Error: list sidebar is not open. Run  list  first.', 'error');
-      return;
-    }
-    const idx = parseInt(arg, 10);
-    if (idx < 1 || idx > lastListedDocs.length) {
-      print(`Error: index ${idx} not in last list.`, 'error');
-      return;
-    }
-    const entry = lastListedDocs[idx - 1];
-    const isMine = entry.user_id === currentUser.uid;
-    const key = isMine ? entry.filename : `${entry.author_name || 'unknown'}/${entry.filename}`;
+    const entry = listEntry(arg, 'Usage: close [<index>]');
+    if (!entry) return;
+    const key = docKeyFor(entry.filename, entry.author_name, entry.user_id === currentUser.uid);
     if (!docs[key]) { print(`"${key}" is not open.`, 'error'); return; }
     closeDocument(key);
     print(`Closed: ${key}`, 'success');
@@ -166,18 +180,9 @@ const COMMANDS = {
   // drops it into an open document.
   async hash(args) {
     if (!requireLogin()) return;
-    const arg = args.trim();
-    if (!/^\d+$/.test(arg)) { print('Usage: hash <index>', 'error'); return; }
-    if (currentSidebarView !== 'list') {
-      print('Error: list sidebar is not open. Run  list  first.', 'error');
-      return;
-    }
-    const idx = parseInt(arg, 10);
-    if (idx < 1 || idx > lastListedDocs.length) {
-      print(`Error: index ${idx} not in last list.`, 'error');
-      return;
-    }
-    const filename = lastListedDocs[idx - 1].filename;
+    const entry = listEntry(args.trim(), 'Usage: hash <index>');
+    if (!entry) return;
+    const filename = entry.filename;
     print(filename, 'info');
 
     const copied = await copyToClipboard(filename);
@@ -247,12 +252,9 @@ const COMMANDS = {
     }
     const [, target, tag] = parts;
 
-    const filename = resolveDocRef(flag, target);
+    const filename = await resolveExistingDoc(flag, target);
     if (!filename) return;
 
-    if (!docs[filename] && !await dbFileExists(filename)) {
-      print(`Error: "${filename}" does not exist.`, 'error'); return;
-    }
     if (await addFileTag(filename, tag)) {
       print(`Tagged "${filename}" with #${tag}`, 'success');
     } else {
@@ -264,10 +266,9 @@ const COMMANDS = {
     if (!requireLogin()) return;
     const parts = args.trim().split(/\s+/);
     if (parts.length < 2 || !parts[1]) { print('Usage: untag <hash> <tagname>', 'error'); return; }
-    const [filename, tag] = parts;
-    if (!docs[filename] && !await dbFileExists(filename)) {
-      print(`Error: "${filename}" does not exist.`, 'error'); return;
-    }
+    const [target, tag] = parts;
+    const filename = await resolveExistingDoc('-h', target);
+    if (!filename) return;
     if (await removeFileTag(filename, tag)) {
       print(`Removed #${tag} from "${filename}"`, 'success');
     } else {
@@ -291,47 +292,9 @@ const COMMANDS = {
     files.forEach(f => print(`  • ${f}`, 'muted'));
   },
 
-  async publish(args) {
-    if (!requireLogin()) return;
-    const parts = args.trim().split(/\s+/);
-    const flag = parts[0];
-    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
-      print('Usage: publish -h <hash>  |  publish -i <index>', 'error'); return;
-    }
-    const name = resolveDocRef(flag, parts[1]);
-    if (!name) return;
-    if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
-    await dbSetVisibility(name, 'public');
-    print(`"${name}" is now public.`, 'success');
-  },
-
-  async share(args) {
-    if (!requireLogin()) return;
-    const parts = args.trim().split(/\s+/);
-    const flag = parts[0];
-    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
-      print('Usage: share -h <hash>  |  share -i <index>', 'error'); return;
-    }
-    const name = resolveDocRef(flag, parts[1]);
-    if (!name) return;
-    if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
-    await dbSetVisibility(name, 'shared');
-    print(`"${name}" is now shared with your friends.`, 'success');
-  },
-
-  async unpublish(args) {
-    if (!requireLogin()) return;
-    const parts = args.trim().split(/\s+/);
-    const flag = parts[0];
-    if ((flag !== '-h' && flag !== '-i') || !parts[1]) {
-      print('Usage: unpublish -h <hash>  |  unpublish -i <index>', 'error'); return;
-    }
-    const name = resolveDocRef(flag, parts[1]);
-    if (!name) return;
-    if (!docs[name] && !await dbFileExists(name)) { print(`Error: "${name}" does not exist.`, 'error'); return; }
-    await dbSetVisibility(name, 'private');
-    print(`"${name}" is now private.`, 'success');
-  },
+  publish:   visibilityCommand('publish',   'public',  'is now public.'),
+  share:     visibilityCommand('share',     'shared',  'is now shared with your friends.'),
+  unpublish: visibilityCommand('unpublish', 'private', 'is now private.'),
 
   register(args) { authRegister(args); },
   login(args) { authLogin(args); },

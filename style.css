@@ -12,6 +12,18 @@
   font-display: swap;
 }
 
+/* The palette and the pixel font, named once. Values are unchanged — every
+   rule below refers to them through these. */
+:root {
+  --pixel: 'Cubic 11', monospace;   /* the pixel font, with its fallback */
+  --pink: #ffadd6;                  /* the main accent: borders, prompts, headings */
+  --pink-bright: #ff69b4;           /* carets and links, a shade louder */
+  --plum: #5a2d4d;                  /* button faces, dividers, selection */
+  --text: #f8f8f8;                  /* body text inside document windows */
+  --yellow: #ffe066;                /* preview links and matches */
+  --ink: #000;                      /* hard shadows and outlines */
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -29,7 +41,7 @@ b, strong, th, h1, h2, h3, h4, h5, h6 {
 }
 
 html, body {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   background: #070b14;
   height: 100vh;
   overflow: hidden;
@@ -39,7 +51,7 @@ html, body {
 }
 
 input, textarea, button, select {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
 }
 
 /* ============== Desktop ============== */
@@ -159,8 +171,8 @@ input, textarea, button, select {
   border-bottom: 4px solid rgba(255, 173, 214, 0.25);
   font-family: 'Cubic 11', 'Courier New', monospace;
   font-size: 10px;
-  color: #ffadd6;
-  text-shadow: 2px 2px 0 #000;
+  color: var(--pink);
+  text-shadow: 2px 2px 0 var(--ink);
   flex-shrink: 0;
 }
 
@@ -170,40 +182,40 @@ input, textarea, button, select {
   box-shadow: 2px 2px 0 #00000080;
   color: #ffadd699;
   cursor: pointer;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 14px;
   padding: 4px 6px;
   line-height: 1;
 }
-#help-sidebar-close:hover { color: #ffadd6; border-color: #ffadd6; }
+#help-sidebar-close:hover { color: var(--pink); border-color: var(--pink); }
 #help-sidebar-close:active { transform: translate(2px, 2px); box-shadow: none; }
 
 #help-sidebar-content {
   flex: 1;
   overflow-y: auto;
   padding: 14px;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 9px;
   line-height: 1.8;
   color: #aabbcc;
 }
 #help-sidebar-content::-webkit-scrollbar { width: 8px; }
 #help-sidebar-content::-webkit-scrollbar-track { background: transparent; }
-#help-sidebar-content::-webkit-scrollbar-thumb { background: #ffadd633; border: 1px solid #ffadd6; }
+#help-sidebar-content::-webkit-scrollbar-thumb { background: #ffadd633; border: 1px solid var(--pink); }
 
 .help-section {
   margin-bottom: 18px;
 }
 
 .help-section-title {
-  font-family: 'Cubic 11', monospace;
-  color: #ffadd6;
+  font-family: var(--pixel);
+  color: var(--pink);
   font-size: 9px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   margin-bottom: 8px;
   opacity: 0.8;
-  text-shadow: 2px 2px 0 #000;
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
 .help-entry {
@@ -223,12 +235,12 @@ input, textarea, button, select {
 .msg-btn {
   margin: 6px 6px 0 0;
   padding: 3px 10px;
-  border: 2px solid #000;
+  border: 2px solid var(--ink);
   box-shadow: 2px 2px 0 #00000080;
   background: #1f1f3a;
   color: #aabbcc;
   cursor: pointer;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 9px;
   line-height: 1;
 }
@@ -247,14 +259,14 @@ input, textarea, button, select {
   background: rgba(8, 12, 20, 0.4);
   backdrop-filter: blur(5px) saturate(180%);
   -webkit-backdrop-filter: blur(5px) saturate(180%);
-  border-top: 4px solid #ffadd6;
+  border-top: 4px solid var(--pink);
   box-shadow: 0 -4px 0 rgba(255, 173, 214, 0.25);
   display: flex;
   flex-direction: column;
   padding: 0 12px 8px;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
-  color: #ffadd6;
+  color: var(--pink);
   flex-shrink: 0;
 }
 
@@ -285,7 +297,7 @@ input, textarea, button, select {
   height: 90px;
   padding: 22px 22px 32px 22px;
   box-sizing: border-box;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
   color: #c4577a;
   line-height: 1.5;
@@ -333,7 +345,7 @@ input, textarea, button, select {
 
 #terminal-output::-webkit-scrollbar { width: 8px; }
 #terminal-output::-webkit-scrollbar-track { background: transparent; }
-#terminal-output::-webkit-scrollbar-thumb { background: #ffadd655; border: 1px solid #ffadd6; }
+#terminal-output::-webkit-scrollbar-thumb { background: #ffadd655; border: 1px solid var(--pink); }
 
 .terminal-line {
   line-height: 1.8;
@@ -341,20 +353,19 @@ input, textarea, button, select {
   word-break: break-all;
 }
 .terminal-line.cmd     { color: #ffffff; }
-.terminal-line.success { color: #ffadd6; }
+.terminal-line.success { color: var(--pink); }
 .terminal-line.error   { color: #ff4466; }
 .terminal-line.info    { color: #88aaff; }
 .terminal-line.muted   { color: #556677; }
-.terminal-line.pink    { color: #ff69b4; }
 
 /* A command you can type, boxed the same way as the desktop hint's. */
 .terminal-line code.cmd-chip {
   background: #0d0d0d;
-  color: #ffadd6;
+  color: var(--pink);
   padding: 1px 4px;
-  border: 1px solid #ffadd6;
+  border: 1px solid var(--pink);
   box-shadow: 2px 2px 0 rgba(255, 173, 214, 0.3);
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
 }
 
@@ -367,11 +378,11 @@ input, textarea, button, select {
 }
 
 #terminal-prompt {
-  font-family: 'Cubic 11', monospace;
-  color: #ffadd6;
+  font-family: var(--pixel);
+  color: var(--pink);
   user-select: none;
   font-size: 10px;
-  text-shadow: 2px 2px 0 #000;
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
 #terminal-input {
@@ -380,9 +391,9 @@ input, textarea, button, select {
   border: none;
   outline: none;
   color: #ffffff;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
-  caret-color: #ffadd6;
+  caret-color: var(--pink);
 }
 
 /* ============== Document Window ============== */
@@ -390,11 +401,11 @@ input, textarea, button, select {
   position: absolute;
   outline: none;
   background: #161636;
-  border: 4px solid #ffadd6;
+  border: 4px solid var(--pink);
   box-shadow:
-    0 0 0 4px #000,
-    8px 8px 0 0 #5a2d4d,
-    8px 8px 0 4px #000;
+    0 0 0 4px var(--ink),
+    8px 8px 0 0 var(--plum),
+    8px 8px 0 4px var(--ink);
   display: flex;
   flex-direction: column;
   min-width: 400px;
@@ -403,11 +414,11 @@ input, textarea, button, select {
 }
 
 .doc-window.focused {
-  border-color: #ffe066;
+  border-color: var(--yellow);
   box-shadow:
-    0 0 0 4px #000,
-    8px 8px 0 0 #ff69b4,
-    8px 8px 0 4px #000;
+    0 0 0 4px var(--ink),
+    8px 8px 0 0 var(--pink-bright),
+    8px 8px 0 4px var(--ink);
 }
 
 /* Title Bar */
@@ -417,7 +428,7 @@ input, textarea, button, select {
   gap: 10px;
   padding: 8px 10px;
   background: #1a1a3a;
-  border-bottom: 4px solid #ffadd6;
+  border-bottom: 4px solid var(--pink);
   cursor: move;
   user-select: none;
   flex-shrink: 0;
@@ -436,12 +447,12 @@ input, textarea, button, select {
 .tl {
   width: 14px;
   height: 14px;
-  border: 2px solid #000;
+  border: 2px solid var(--ink);
   cursor: pointer;
   transition: transform 0.05s steps(1, end);
   border-radius: 0;
 }
-.tl:hover { transform: translate(-1px, -1px); box-shadow: 1px 1px 0 #000; }
+.tl:hover { transform: translate(-1px, -1px); box-shadow: 1px 1px 0 var(--ink); }
 .tl-close    { background: #ff5f57; }
 .tl-minimize { background: #ffbd2e; }
 .tl-maximize { background: #28c840; }
@@ -449,13 +460,13 @@ input, textarea, button, select {
 .doc-title {
   flex: 1;
   font-family: 'Cubic 11', 'Courier New', monospace;
-  color: #f8f8f8;
+  color: var(--text);
   font-size: 9px;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 2px 2px 0 #000;
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
 .doc-tab-group {
@@ -470,22 +481,22 @@ input, textarea, button, select {
 
 .doc-tab {
   padding: 6px 14px;
-  border: 2px solid #000;
+  border: 2px solid var(--ink);
   border-bottom: none;
   border-radius: 8px 8px 0 0;
   background: #1f1f3a;
   cursor: pointer;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 8px;
   color: #8a8aa8;
   transition: none;
   position: relative;
 }
-.doc-tab:hover { background: #2f2f55; color: #f8f8f8; }
+.doc-tab:hover { background: #2f2f55; color: var(--text); }
 .doc-tab.active {
   background: #161636;
-  color: #ffadd6;
-  border-color: #ffadd6;
+  color: var(--pink);
+  border-color: var(--pink);
   z-index: 3;
 }
 
@@ -493,7 +504,7 @@ input, textarea, button, select {
 .doc-title-bar {
   padding: 10px 16px;
   background: #161636;
-  border-bottom: 2px dashed #5a2d4d;
+  border-bottom: 2px dashed var(--plum);
   flex-shrink: 0;
 }
 
@@ -502,10 +513,10 @@ input, textarea, button, select {
   border: none;
   outline: none;
   font-size: 12px;
-  color: #ffe066;
+  color: var(--yellow);
   background: transparent;
-  font-family: 'Cubic 11', monospace;
-  text-shadow: 2px 2px 0 #000;
+  font-family: var(--pixel);
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
 .doc-title-input::placeholder {
@@ -519,7 +530,7 @@ input, textarea, button, select {
   gap: 6px;
   padding: 8px 10px;
   background: #1a1a3a;
-  border-bottom: 4px solid #5a2d4d;
+  border-bottom: 4px solid var(--plum);
   flex-shrink: 0;
 }
 
@@ -531,29 +542,22 @@ input, textarea, button, select {
      than the plain-text ones next to them. */
   line-height: 1.6;
   padding: 6px 10px;
-  border: 2px solid #000;
+  border: 2px solid var(--ink);
   background: #2a2a4a;
   cursor: pointer;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 8px;
-  color: #f8f8f8;
-  box-shadow: 2px 2px 0 #000;
+  color: var(--text);
+  box-shadow: 2px 2px 0 var(--ink);
   transition: none;
 }
-.toolbar-btn:hover { background: #5a2d4d; }
+.toolbar-btn:hover { background: var(--plum); }
 .toolbar-btn:active,
 .toolbar-btn.active {
-  background: #ff69b4;
-  color: #000;
+  background: var(--pink-bright);
+  color: var(--ink);
   transform: translate(2px, 2px);
   box-shadow: none;
-}
-
-.toolbar-divider {
-  width: 2px;
-  height: 22px;
-  background: #5a2d4d;
-  margin: 0 4px;
 }
 
 .upload-btn input[type="file"] {
@@ -574,23 +578,23 @@ input, textarea, button, select {
   border: none;
   outline: none;
   resize: none;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
   line-height: 1.9;
-  color: #f8f8f8;
+  color: var(--text);
   background:
     repeating-linear-gradient(
       transparent 0 23px,
       rgba(255, 173, 214, 0.06) 23px 24px
     ),
     #0a0a1e;
-  caret-color: #ff69b4;
+  caret-color: var(--pink-bright);
   overflow-y: auto;
 }
 
 .doc-editor::-webkit-scrollbar { width: 8px; }
 .doc-editor::-webkit-scrollbar-track { background: #2a2a4a; }
-.doc-editor::-webkit-scrollbar-thumb { background: #ffadd6; border: 1px solid #000; }
+.doc-editor::-webkit-scrollbar-thumb { background: var(--pink); border: 1px solid var(--ink); }
 
 /* CodeMirror (the vim editor) wears the same clothes as .doc-editor */
 .doc-content .CodeMirror {
@@ -598,10 +602,10 @@ input, textarea, button, select {
   height: 100%;
   min-width: 0;
   padding: 16px 0 16px 16px;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
   line-height: 1.9;
-  color: #f8f8f8;
+  color: var(--text);
   background:
     repeating-linear-gradient(
       transparent 0 23px,
@@ -613,13 +617,13 @@ input, textarea, button, select {
 .CodeMirror-lines { padding: 0; }
 .CodeMirror pre.CodeMirror-line,
 .CodeMirror pre.CodeMirror-line-like { padding: 0; }
-.CodeMirror-selected { background: #5a2d4d; }
+.CodeMirror-selected { background: var(--plum); }
 .CodeMirror-focused .CodeMirror-selected { background: #7a3d6d; }
 .CodeMirror-line::selection,
 .CodeMirror-line > span::selection { background: #7a3d6d; }
 
 /* Insert mode: a thin caret. Normal / visual: vim's block cursor. */
-.CodeMirror-cursor { border-left: 2px solid #ff69b4; }
+.CodeMirror-cursor { border-left: 2px solid var(--pink-bright); }
 .cm-fat-cursor .CodeMirror-cursor,
 .CodeMirror-cursor.CodeMirror-overwrite {
   background: rgba(255, 105, 180, 0.55);
@@ -632,49 +636,49 @@ input, textarea, button, select {
 .cm-fat-cursor .CodeMirror-line::selection,
 .cm-fat-cursor .CodeMirror-line > span::selection { background: #7a3d6d; }
 
-.CodeMirror-matchingbracket { color: #ffe066 !important; text-decoration: none; }
-.cm-searching { background: #ffe066; color: #000; }
+.CodeMirror-matchingbracket { color: var(--yellow) !important; text-decoration: none; }
+.cm-searching { background: var(--yellow); color: var(--ink); }
 
 .CodeMirror-vscrollbar::-webkit-scrollbar { width: 8px; }
 .CodeMirror-vscrollbar::-webkit-scrollbar-track { background: #2a2a4a; }
-.CodeMirror-vscrollbar::-webkit-scrollbar-thumb { background: #ffadd6; border: 1px solid #000; }
+.CodeMirror-vscrollbar::-webkit-scrollbar-thumb { background: var(--pink); border: 1px solid var(--ink); }
 
 /* The `:` / `/` command line vim opens at the top of the editor */
 .CodeMirror-dialog {
   padding: 5px 10px;
   background: #1a1a3a;
-  border-bottom: 2px solid #5a2d4d;
-  color: #f8f8f8;
-  font-family: 'Cubic 11', monospace;
+  border-bottom: 2px solid var(--plum);
+  color: var(--text);
+  font-family: var(--pixel);
   font-size: 10px;
 }
 
 .CodeMirror-dialog input {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
-  color: #ffadd6;
+  color: var(--pink);
   background: transparent;
   border: none;
   outline: none;
-  caret-color: #ff69b4;
+  caret-color: var(--pink-bright);
 }
 
 /* The VIM button stays the plain toolbar colour whether vim is on or off —
    the strike-through label is what says "off". */
 .vim-btn.active {
   background: #2a2a4a;
-  color: #f8f8f8;
+  color: var(--text);
   transform: none;
-  box-shadow: 2px 2px 0 #000;
+  box-shadow: 2px 2px 0 var(--ink);
 }
-.vim-btn.active:hover { background: #5a2d4d; }
+.vim-btn.active:hover { background: var(--plum); }
 .vim-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 .vim-btn:not(.active) { text-decoration: line-through; }
 
 /* Current vim mode, shown in the toolbar */
 .vim-mode {
   font-size: 8px;
-  color: #ffadd6;
+  color: var(--pink);
   white-space: nowrap;
   padding: 0 4px;
 }
@@ -686,21 +690,21 @@ input, textarea, button, select {
   display: none;
   font-size: 10px;
   line-height: 1.9;
-  color: #f8f8f8;
-  font-family: 'Cubic 11', monospace;
+  color: var(--text);
+  font-family: var(--pixel);
   background: #0a0a1e;
 }
 
 .doc-preview::-webkit-scrollbar { width: 8px; }
 .doc-preview::-webkit-scrollbar-track { background: #2a2a4a; }
-.doc-preview::-webkit-scrollbar-thumb { background: #ffadd6; border: 1px solid #000; }
+.doc-preview::-webkit-scrollbar-thumb { background: var(--pink); border: 1px solid var(--ink); }
 
 .doc-preview.visible {
   display: block;
 }
 
 .doc-preview a.doc-link {
-  color: #ffadd6;
+  color: var(--pink);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -709,27 +713,27 @@ input, textarea, button, select {
 /* Markdown preview styles */
 .doc-preview h1, .doc-preview h2, .doc-preview h3 {
   margin: 1em 0 0.5em;
-  font-family: 'Cubic 11', monospace;
-  color: #ffe066;
-  text-shadow: 2px 2px 0 #000;
+  font-family: var(--pixel);
+  color: var(--yellow);
+  text-shadow: 2px 2px 0 var(--ink);
   line-height: 1.4;
 }
-.doc-preview h1 { font-size: 16px; border-bottom: 4px solid #ffadd6; padding-bottom: 0.4em; }
-.doc-preview h2 { font-size: 13px; border-bottom: 2px solid #5a2d4d; padding-bottom: 0.3em; }
-.doc-preview h3 { font-size: 11px; color: #ff69b4; }
+.doc-preview h1 { font-size: 16px; border-bottom: 4px solid var(--pink); padding-bottom: 0.4em; }
+.doc-preview h2 { font-size: 13px; border-bottom: 2px solid var(--plum); padding-bottom: 0.3em; }
+.doc-preview h3 { font-size: 11px; color: var(--pink-bright); }
 .doc-preview p { margin: 0.7em 0; }
 .doc-preview code {
-  background: #000;
+  background: var(--ink);
   color: #5fff87;
   padding: 1px 6px;
-  border: 1px solid #5a2d4d;
-  font-family: 'Cubic 11', monospace;
+  border: 1px solid var(--plum);
+  font-family: var(--pixel);
   font-size: 0.95em;
 }
 .doc-preview pre {
-  background: #000;
-  border: 2px solid #ffadd6;
-  box-shadow: 4px 4px 0 #5a2d4d;
+  background: var(--ink);
+  border: 2px solid var(--pink);
+  box-shadow: 4px 4px 0 var(--plum);
   padding: 12px;
   overflow-x: auto;
   margin: 1em 0;
@@ -740,7 +744,7 @@ input, textarea, button, select {
   padding: 0;
 }
 .doc-preview blockquote {
-  border-left: 4px solid #ff69b4;
+  border-left: 4px solid var(--pink-bright);
   background: #161636;
   padding: 6px 12px;
   color: #8a8aa8;
@@ -752,8 +756,8 @@ input, textarea, button, select {
 }
 .doc-preview img {
   max-width: 100%;
-  border: 4px solid #ffadd6;
-  box-shadow: 4px 4px 0 #5a2d4d;
+  border: 4px solid var(--pink);
+  box-shadow: 4px 4px 0 var(--plum);
   margin: 8px 0;
   image-rendering: pixelated;
 }
@@ -761,22 +765,22 @@ input, textarea, button, select {
   border-collapse: collapse;
   width: 100%;
   margin: 0.8em 0;
-  border: 2px solid #ffadd6;
+  border: 2px solid var(--pink);
 }
 .doc-preview th, .doc-preview td {
-  border: 2px solid #5a2d4d;
+  border: 2px solid var(--plum);
   padding: 6px 10px;
   text-align: left;
 }
 .doc-preview th {
   background: #1a1a3a;
-  color: #ffe066;
-  font-family: 'Cubic 11', monospace;
+  color: var(--yellow);
+  font-family: var(--pixel);
   font-size: 9px;
 }
-.doc-preview a { color: #ff69b4; text-decoration: underline; }
-.doc-preview a:hover { color: #ffe066; }
-.doc-preview hr { border: none; border-top: 4px dashed #5a2d4d; margin: 1em 0; }
+.doc-preview a { color: var(--pink-bright); text-decoration: underline; }
+.doc-preview a:hover { color: var(--yellow); }
+.doc-preview hr { border: none; border-top: 4px dashed var(--plum); margin: 1em 0; }
 
 /* Resize handle */
 .doc-resize {
@@ -787,17 +791,17 @@ input, textarea, button, select {
   height: 18px;
   cursor: se-resize;
   background:
-    linear-gradient(135deg, transparent 0 33%, #ffadd6 33% 50%, transparent 50% 66%, #ffadd6 66% 83%, transparent 83%);
+    linear-gradient(135deg, transparent 0 33%, var(--pink) 33% 50%, transparent 50% 66%, var(--pink) 66% 83%, transparent 83%);
 }
 
 /* Saved indicator */
 .doc-saved {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 8px;
   color: #5fff87;
   margin-left: auto;
   white-space: nowrap;
-  text-shadow: 2px 2px 0 #000;
+  text-shadow: 2px 2px 0 var(--ink);
 }
 
 .tag-pills {
@@ -810,12 +814,12 @@ input, textarea, button, select {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #ff69b4;
-  color: #000;
-  border: 2px solid #000;
-  box-shadow: 2px 2px 0 #000;
+  background: var(--pink-bright);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
   padding: 3px 8px;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 8px;
 }
 
@@ -823,25 +827,25 @@ input, textarea, button, select {
   background: none;
   border: none;
   cursor: pointer;
-  color: #000;
+  color: var(--ink);
   font-size: 10px;
   line-height: 1;
   padding: 0 0 0 2px;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
 }
 .tag-pill-remove:hover { color: #ff4466; }
 
 .tag-add-input {
-  border: 2px dashed #5a2d4d;
+  border: 2px dashed var(--plum);
   outline: none;
   background: transparent;
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 8px;
-  color: #f8f8f8;
+  color: var(--text);
   width: 110px;
   padding: 4px 6px;
 }
-.tag-add-input:focus { border-color: #ff69b4; }
+.tag-add-input:focus { border-color: var(--pink-bright); }
 
 .doc-window.preview-mode .tag-add-input,
 .doc-window.preview-mode .tag-pill-remove {
@@ -871,20 +875,20 @@ input, textarea, button, select {
   pointer-events: none;
 }
 #desktop-hint h2 {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 14px;
   margin-bottom: 14px;
   color: #446677;
-  text-shadow: 3px 3px 0 #000;
+  text-shadow: 3px 3px 0 var(--ink);
   line-height: 1.5;
 }
 #desktop-hint code {
   background: #0d0d0d;
-  color: #ffadd6;
+  color: var(--pink);
   padding: 1px 4px;
-  border: 1px solid #ffadd6;
+  border: 1px solid var(--pink);
   box-shadow: 2px 2px 0 rgba(255, 173, 214, 0.3);
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
 }
 #desktop-hint .desktop-about {
@@ -892,15 +896,15 @@ input, textarea, button, select {
   margin: 0 auto;
 }
 #desktop-hint .desktop-about h3 {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 11px;
-  color: #ffadd6;
-  text-shadow: 2px 2px 0 #000;
+  color: var(--pink);
+  text-shadow: 2px 2px 0 var(--ink);
   letter-spacing: 1px;
   margin-bottom: 10px;
 }
 #desktop-hint .desktop-about p {
-  font-family: 'Cubic 11', monospace;
+  font-family: var(--pixel);
   font-size: 10px;
   color: #5a7088;
   line-height: 1.8;
