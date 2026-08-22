@@ -242,8 +242,8 @@ function renderIndex(user, posts) {
     return;
   }
 
-  // Each entry shows its whole post, under the date it was written — the date
-  // doubles as the permalink.
+  // Each entry shows the first few lines of its post, under the date it was
+  // written — the date doubles as the permalink.
   mainEl.innerHTML = onPage.map(doc => {
     const url = escapeHtml(postUrl(doc));
     const date = postDate(doc);
@@ -251,7 +251,8 @@ function renderIndex(user, posts) {
       <article class="post">
         ${date ? `<h2 class="post-date"><a href="${url}">${escapeHtml(date)}</a></h2>` : ''}
         ${doc.title ? `<h3 class="post-title"><a href="${url}">${escapeHtml(doc.title)}</a></h3>` : ''}
-        <div class="post-body"></div>
+        <div class="post-body excerpt"></div>
+        <a class="read-more" href="${url}" hidden>Read more →</a>
         ${tagsHtml(doc, user.username)}
       </article>`;
   }).join('');
@@ -261,7 +262,22 @@ function renderIndex(user, posts) {
     rewriteDocLinks(body);
   });
 
+  markTruncated();
+  // A line count only holds for the metrics it was measured with: the serif
+  // arrives after the first paint, and a narrower window rewraps everything.
+  if (document.fonts) document.fonts.ready.then(markTruncated).catch(() => {});
+  window.addEventListener('resize', markTruncated);
+
   mainEl.insertAdjacentHTML('beforeend', navHtml(user, page, pageCount));
+}
+
+// CSS clamps each excerpt to five lines; only the browser knows whether a post
+// actually ran past them, so the link to the rest is revealed by measurement.
+function markTruncated() {
+  mainEl.querySelectorAll('.post-body.excerpt').forEach(body => {
+    const more = body.parentElement.querySelector('.read-more');
+    if (more) more.hidden = body.scrollHeight <= body.clientHeight + 1;
+  });
 }
 
 // The search box only makes sense once we know whose posts are being searched,

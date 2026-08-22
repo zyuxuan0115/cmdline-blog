@@ -211,6 +211,31 @@ a { color: var(--text); }
   overflow-wrap: break-word;
 }
 
+/* On the index a post is a preview: five lines, then the link to the rest. */
+.post-body.excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  overflow: hidden;
+}
+
+/* The margins around the first and last blocks would otherwise show as a gap
+   above the excerpt and below its fifth line. */
+.post-body.excerpt > :first-child { margin-top: 0; }
+.post-body.excerpt > :last-child { margin-bottom: 0; }
+
+/* Revealed by markTruncated() only on posts that really were cut short. */
+.read-more {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.read-more:hover { color: var(--secondary); }
+.read-more[hidden] { display: none; }
+
 .post-body p,
 .post-body ul,
 .post-body ol,
