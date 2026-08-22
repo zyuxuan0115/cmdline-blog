@@ -302,6 +302,124 @@ a { color: var(--text); }
 
 .post-body a { color: var(--text); }
 
+/* ============== Comments ============== */
+
+/* Set in the same column as the post, but quieter than it — the post is what
+   the page is for. */
+.comments {
+  max-width: 704px;
+  margin: 0 auto 48px;
+  padding: 0 32px;
+}
+
+.comments-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--secondary);
+  padding-top: 24px;
+  border-top: 1px solid #ddd;
+}
+
+.comments-status,
+.comments-empty,
+.comment-signin {
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.comment-signin a { color: var(--secondary); }
+
+.comment-list {
+  list-style: none;
+  margin-top: 24px;
+}
+
+.comment + .comment { margin-top: 24px; }
+
+/* Name, time and the delete button on one line; the button sits at the far end
+   so it can't be hit while reaching for anything else. */
+.comment-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.comment-author { font-weight: 700; color: var(--secondary); }
+
+.comment-delete {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--serif);
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.comment-delete:hover:not(:disabled) { color: var(--secondary); text-decoration: underline; }
+.comment-delete:disabled { opacity: 0.5; cursor: default; }
+
+/* Comments are stored and shown as plain text, so the line breaks their author
+   typed are the only formatting they get. */
+.comment-body {
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.comment-form { margin-top: 32px; }
+
+.comment-input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 0;      /* Safari rounds text areas by default */
+  -webkit-appearance: none;
+  resize: vertical;
+}
+
+.comment-input::placeholder { color: var(--muted); }
+.comment-input:focus { outline: none; border-color: var(--secondary); }
+
+.comment-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+/* Pushes the button to the right whether or not there is an error to show. */
+.comment-error {
+  flex: 1;
+  font-size: 14px;
+  color: var(--secondary);
+}
+
+.comment-submit {
+  padding: 6px 14px;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--secondary);
+  border-radius: 0;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.comment-submit:hover:not(:disabled) { color: #fff; background: var(--secondary); }
+.comment-submit:disabled { opacity: 0.5; cursor: default; }
+
 /* ============== States & footer ============== */
 
 .status, .empty, .error {
@@ -346,6 +464,7 @@ a { color: var(--text); }
   .site-header { margin: 56px auto 40px; }
   #blog-author { font-size: 28px; }
   .site-sub { font-size: 16px; }
-  .post, .post-nav, .site-footer, .status, .empty, .error { padding: 0 20px; }
+  .post, .post-nav, .site-footer, .comments,
+  .status, .empty, .error { padding: 0 20px; }
   .post-date { font-size: 21px; }
 }

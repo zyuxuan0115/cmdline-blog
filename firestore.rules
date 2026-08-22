@@ -39,6 +39,50 @@ service cloud.firestore {
                     || isAdmin();
     }
 
+    // Comments left on a post by other registered users. They live in their own
+    // collection, keyed by the post's filename, so reading a post doesn't drag
+    // its whole thread along with it.
+    match /comments/{commentId} {
+      // A comment is exactly as visible as the post it hangs off, so a thread on
+      // a friends-only or private post stays behind the same door. Every comment
+      // in one thread names the same post, so this get() is resolved once per
+      // query rather than once per comment.
+      function canSeePost(postId) {
+        let post = get(/databases/$(database)/documents/documents/$(postId)).data;
+        return post.visibility == 'public'
+            || (request.auth != null && request.auth.uid == post.user_id)
+            || (post.visibility == 'shared'
+                && request.auth != null
+                && areFriends(request.auth.uid, post.user_id));
+      }
+
+      allow read: if canSeePost(resource.data.post_id) || isAdmin();
+
+      // Only a signed-in user may comment, only under their own name, and only
+      // on a post they are allowed to read. `post_owner` is recorded so the
+      // author of the post can moderate their own threads without a lookup —
+      // it must be the real owner, not whoever the commenter names.
+      allow create: if request.auth != null
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.author_name is string
+                    && request.resource.data.created_at is string
+                    && request.resource.data.content is string
+                    && request.resource.data.content.size() > 0
+                    && request.resource.data.content.size() <= 2000
+                    && request.resource.data.post_owner ==
+                       get(/databases/$(database)/documents/documents/$(request.resource.data.post_id)).data.user_id
+                    && canSeePost(request.resource.data.post_id);
+
+      // Comments are not editable — a published remark shouldn't change under
+      // the reply to it. Removing one is the commenter's call, or the post
+      // author's.
+      allow update: if false;
+      allow delete: if (request.auth != null
+                        && (request.auth.uid == resource.data.user_id
+                            || request.auth.uid == resource.data.post_owner))
+                    || isAdmin();
+    }
+
     // User profile mirror — lets the admin dashboard list registered users
     // (Firebase Auth's user list is not readable from the client).
     match /users/{uid} {

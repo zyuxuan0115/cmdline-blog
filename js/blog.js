@@ -345,7 +345,7 @@ function navHtml(user, page, pageCount) {
   return links.length ? `<nav class="post-nav pager">${links.join('')}</nav>` : '';
 }
 
-function renderPost(doc, site) {
+function renderPost(doc, site, viewer) {
   const author = doc.author_name || username || 'Unknown';
   const banner = site ? siteTitle(site) : author;
   const title = postTitle(doc);
@@ -361,6 +361,9 @@ function renderPost(doc, site) {
       <div class="post-body"></div>
       ${tagsHtml(doc, username || author)}
     </article>
+    <section class="comments" id="comments">
+      <p class="comments-status">Loading comments…</p>
+    </section>
     <nav class="post-nav">
       <a href="?u=${encodeURIComponent(username || author)}">← All posts by ${escapeHtml(author)}</a>
     </nav>`;
@@ -368,6 +371,166 @@ function renderPost(doc, site) {
   const body = mainEl.querySelector('.post-body');
   body.innerHTML = renderMarkdown(doc.content);
   rewriteDocLinks(body);
+
+  // The thread is a second round trip; the post shouldn't wait on it.
+  loadComments(doc, viewer);
+}
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+// Anyone with an account may reply to a post they can read — sign-in happens in
+// the terminal and the session is shared across the site, so a signed-in reader
+// arrives here ready to write. The rules make a comment exactly as visible as
+// the post it hangs off.
+//
+// Comments are shown as the plain text they were typed as, never as markdown:
+// a remark from a stranger has no business rendering HTML on someone's blog.
+
+// Matches the ceiling the rules enforce, so an over-long comment is refused
+// while it is being typed rather than after it is sent.
+const COMMENT_MAX = 2000;
+
+function commentsRef() {
+  return _db.collection('comments');
+}
+
+function commenterName(viewer) {
+  return viewer.displayName || viewer.email || 'you';
+}
+
+// Comments arrive minutes apart rather than days, so unlike a post they carry a
+// time as well as a date.
+function commentDate(iso) {
+  const d = new Date(iso);
+  if (!iso || isNaN(d)) return '';
+  return d.toLocaleString(undefined,
+    { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+async function loadComments(doc, viewer) {
+  const section = document.getElementById('comments');
+  if (!section) return;
+  let comments;
+  try {
+    const snap = await commentsRef()
+      .where('post_id', '==', doc.filename)
+      .orderBy('created_at', 'asc')
+      .get();
+    comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    section.innerHTML = `<p class="comments-status">Comments could not be loaded: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+  drawComments(section, doc, viewer, comments);
+}
+
+// The whole section is redrawn after every change, so the count, the list and
+// the form can never disagree about what has been said.
+function drawComments(section, doc, viewer, comments) {
+  const heading = comments.length
+    ? `${comments.length} comment${comments.length === 1 ? '' : 's'}`
+    : 'Comments';
+
+  section.innerHTML = `
+    <h2 class="comments-title">${heading}</h2>
+    ${comments.length
+      ? `<ol class="comment-list">${comments.map(c => commentHtml(c, doc, viewer)).join('')}</ol>`
+      : '<p class="comments-empty">No comments yet.</p>'}
+    ${commentFormHtml(viewer)}`;
+
+  wireComments(section, doc, viewer, comments);
+}
+
+// A comment can be taken down by whoever wrote it, and by whoever wrote the
+// post — a blog of your own shouldn't be somewhere you can't sweep up.
+function commentHtml(c, doc, viewer) {
+  const canDelete = !!viewer && (viewer.uid === c.user_id || viewer.uid === doc.user_id);
+  const when = commentDate(c.created_at);
+  return `
+    <li class="comment" data-id="${escapeHtml(c.id)}">
+      <div class="comment-meta">
+        <span class="comment-author">${escapeHtml(c.author_name || 'someone')}</span>
+        ${when ? `<span class="comment-when">${escapeHtml(when)}</span>` : ''}
+        ${canDelete ? '<button type="button" class="comment-delete">delete</button>' : ''}
+      </div>
+      <div class="comment-body">${escapeHtml(c.content)}</div>
+    </li>`;
+}
+
+function commentFormHtml(viewer) {
+  if (!viewer) {
+    return `<p class="comment-signin">Sign in from the
+      <a href="index.html">terminal</a> to leave a comment.</p>`;
+  }
+  return `
+    <form class="comment-form">
+      <textarea class="comment-input" rows="4" maxlength="${COMMENT_MAX}"
+                aria-label="Your comment"
+                placeholder="Leave a comment as ${escapeHtml(commenterName(viewer))}…"></textarea>
+      <div class="comment-actions">
+        <span class="comment-error" role="alert"></span>
+        <button type="submit" class="comment-submit">Post comment</button>
+      </div>
+    </form>`;
+}
+
+// Rules can refuse a write for reasons this page can't see coming (a friendship
+// that ended, a post made private while the reply was being typed), so failures
+// are reported next to the button rather than swallowed.
+function commentError(section, msg) {
+  const slot = section.querySelector('.comment-error');
+  if (slot) slot.textContent = msg;
+}
+
+function wireComments(section, doc, viewer, comments) {
+  section.querySelectorAll('.comment-delete').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.closest('.comment').dataset.id;
+      btn.disabled = true;
+      try {
+        await commentsRef().doc(id).delete();
+      } catch (e) {
+        btn.disabled = false;
+        commentError(section, `Could not delete that comment: ${e.message}`);
+        return;
+      }
+      drawComments(section, doc, viewer, comments.filter(c => c.id !== id));
+    };
+  });
+
+  const form = section.querySelector('.comment-form');
+  if (!form) return;                       // signed out: nothing to submit
+
+  const input  = form.querySelector('.comment-input');
+  const button = form.querySelector('.comment-submit');
+
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const content = input.value.trim();
+    if (!content) { input.focus(); return; }
+
+    // `post_owner` is written from the post as it was read, and the rules check
+    // it against the post itself — so it always names the real author.
+    const comment = {
+      post_id:     doc.filename,
+      post_owner:  doc.user_id,
+      user_id:     viewer.uid,
+      author_name: commenterName(viewer),
+      content,
+      created_at:  new Date().toISOString(),
+    };
+
+    commentError(section, '');
+    button.disabled = true;
+    let ref;
+    try {
+      ref = await commentsRef().add(comment);
+    } catch (err) {
+      button.disabled = false;
+      commentError(section, `Could not post that comment: ${err.message}`);
+      return;
+    }
+    drawComments(section, doc, viewer, [...comments, { id: ref.id, ...comment }]);
+  };
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
@@ -410,7 +573,7 @@ async function main() {
     let site = null;
     const owner = username || doc.author_name || '';
     if (owner) { try { site = await resolveUsername(owner); } catch (_) { /* banner falls back to the author's name */ } }
-    renderPost(doc, site);
+    renderPost(doc, site, viewer);
     return;
   }
 

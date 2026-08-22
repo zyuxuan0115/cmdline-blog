@@ -173,6 +173,19 @@ index, while they're signed in — everyone else gets neither the entry nor the
 post behind its link. Posts that aren't public are marked *private* or
 *friends only* under the entry.
 
+### Comments
+
+Every post opened on its own (`&p=<hash>`) carries a comment thread underneath.
+Anyone with an account may reply: sign-in happens in the terminal and the
+session is shared across the site, so a signed-in reader arrives at the blog
+ready to write. Everyone else sees the thread and an invitation to sign in.
+
+A comment is exactly as visible as the post it hangs off — a thread on a
+friends-only or private post is readable only by the people who could read the
+post itself. Comments are stored and shown as the plain text they were typed
+as, never as markdown, and they can't be edited once posted. Either the person
+who wrote a comment or the author of the post can delete it.
+
 ## Invitation Code
 
 Registration requires one of the following invitation codes:
