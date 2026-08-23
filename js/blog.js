@@ -433,7 +433,7 @@ function drawComments(section, doc, viewer, comments) {
   section.innerHTML = `
     <h2 class="comments-title">${heading}</h2>
     ${comments.length
-      ? `<ol class="comment-list">${comments.map(c => commentHtml(c, doc, viewer)).join('')}</ol>`
+      ? `<ol class="comment-list">${comments.map((c, i) => commentHtml(c, doc, viewer, i + 1)).join('')}</ol>`
       : '<p class="comments-empty">No comments yet.</p>'}
     ${commentFormHtml(viewer)}`;
 
@@ -442,12 +442,17 @@ function drawComments(section, doc, viewer, comments) {
 
 // A comment can be taken down by whoever wrote it, and by whoever wrote the
 // post — a blog of your own shouldn't be somewhere you can't sweep up.
-function commentHtml(c, doc, viewer) {
+//
+// `n` numbers the thread in the order it is read, oldest first — it is a
+// position in the list on screen, not an identity, so removing a comment
+// renumbers the ones under it.
+function commentHtml(c, doc, viewer, n) {
   const canDelete = !!viewer && (viewer.uid === c.user_id || viewer.uid === doc.user_id);
   const when = commentDate(c.created_at);
   return `
     <li class="comment" data-id="${escapeHtml(c.id)}">
       <div class="comment-meta">
+        <span class="comment-index">#${n}</span>
         <span class="comment-author">${escapeHtml(c.author_name || 'someone')}</span>
         ${when ? `<span class="comment-when">${escapeHtml(when)}</span>` : ''}
         ${canDelete ? '<button type="button" class="comment-delete">delete</button>' : ''}

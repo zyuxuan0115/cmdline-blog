@@ -347,6 +347,9 @@ a { color: var(--text); }
   color: var(--muted);
 }
 
+/* The comment's place in the thread, oldest first. */
+.comment-index { color: var(--muted); }
+
 .comment-author { font-weight: 700; color: var(--secondary); }
 
 .comment-delete {

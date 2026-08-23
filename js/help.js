@@ -185,11 +185,10 @@ function buildDocEntry(doc, isMine, index) {
             : visibility === 'shared' ? ' <span style="color:#88ff88">[shared]</span>'
             : ' <span style="color:#556677">[private]</span>';
   const author = !isMine && author_name ? ' <span style="color:#ffadd6">by ' + author_name + '</span>' : '';
-  const authorId = !isMine && author_name ? '<br><span style="color:#556677;font-size:0.85em">add: friend ' + author_name + '</span>' : '';
   const tagStr = tags && tags.length ? '<br><span>' + tags.map(t => `#${t}`).join(' ') + '</span>' : '';
   const timeStr = updated_at ? '<br><span style="color:#556677;font-size:0.85em">edited ' + formatTimeAgo(updated_at) + '</span>' : '';
   const clickAttr = index != null ? ` style="cursor:pointer" onclick="runCommand('open ${index}')"` : '';
-  return `<div class="help-entry"${clickAttr}>${indexStr}${displayTitle}${open}${vis}${author}${tagStr}${timeStr}${authorId}</div>`;
+  return `<div class="help-entry"${clickAttr}>${indexStr}${displayTitle}${open}${vis}${author}${tagStr}${timeStr}</div>`;
 }
 
 // A window opening or closing makes the [open] markers stale. The sidebar is
