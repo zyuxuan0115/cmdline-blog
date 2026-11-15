@@ -2,7 +2,7 @@
 
 原生 Swift + WKWebView 客户端，最低支持 macOS 13。直接加载现有 Web app，
 终端、vim 编辑器、背景、账号、文档、标签、发布和社交功能均由同一套 Web 代码提供。
-默认地址来自仓库 `register.html`：`https://kate0115.net/apps/cmdline-blog/`。
+默认地址：`https://kate0115.cc/apps/cmdline-blog/`。
 这是需要联网的客户端，不是离线编辑器；修改本地 Web 文件后，需要部署或使用下面的本地开发模式才能看到修改。
 
 ## 构建与启动

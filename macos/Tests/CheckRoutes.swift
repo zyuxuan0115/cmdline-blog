@@ -5,6 +5,7 @@ import Foundation
 enum CheckRoutes {
     static func main() throws {
         let site = try Site()
+        precondition(site.url.absoluteString == "https://kate0115.cc/apps/cmdline-blog/")
         let blog = URL(string: "blog.html?u=someone%20else&p=post&t=swift", relativeTo: site.url)!.absoluteURL
         precondition(site.isBlog(blog))
         precondition(site.opensInBrowser(blog))

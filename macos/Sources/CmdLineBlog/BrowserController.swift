@@ -117,7 +117,7 @@ final class BrowserController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     private func showError(_ message: String) {
-        status.stringValue = "\(message)\nPress ⌘R to retry."
+        status.stringValue = "\(message)\n\(site.url.absoluteString)\nPress ⌘R to retry."
         status.isHidden = false
     }
 

@@ -2,7 +2,7 @@ import Foundation
 
 struct Site {
     // The existing public app URL in register.html.
-    static let productionURL = URL(string: "https://kate0115.net/apps/cmdline-blog/")!
+    static let productionURL = URL(string: "https://kate0115.cc/apps/cmdline-blog/")!
     let url: URL
 
     init(address: String? = nil) throws {
