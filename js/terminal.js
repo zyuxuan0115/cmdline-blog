@@ -194,7 +194,7 @@ const COMMANDS = {
   },
 
   // Open a user's published posts in the plain-text blog reader (blog.html),
-  // in a new tab so the terminal session is left alone. With no username it
+  // in a new tab (default browser in macOS) so the terminal stays open. With no username it
   // opens your own blog.
   //
   //   blog --name <title>   title your own blog (--name '' goes back to your
@@ -236,6 +236,15 @@ const COMMANDS = {
     const name = arg.replace(/^@/, '') || (currentUser && currentUser.displayName) || '';
     if (!name) { print('Usage: blog <username>   |   blog --name <title>', 'error'); return; }
     const url = `blog.html?u=${encodeURIComponent(name)}`;
+    if (window.cmdlineDesktop) {
+      try {
+        if (!await window.cmdlineDesktop.openBlog(url)) throw new Error('Could not open the default browser.');
+        print(`Opened ${name}'s blog in your default browser.`, 'success');
+      } catch (e) {
+        print(`Error: ${e.message}`, 'error');
+      }
+      return;
+    }
     if (window.open(url, '_blank')) {
       print(`Opened ${name}'s blog in a new tab.`, 'success');
     } else {

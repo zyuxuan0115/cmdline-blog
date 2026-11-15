@@ -5,6 +5,10 @@ an animated space background. You write in vim inside a terminal, then publish
 what you like as a plain, readable blog page. Built with vanilla JavaScript and
 Firebase (Firestore, Auth, Cloud Functions, Hosting).
 
+The native macOS client lives in [`macos/`](macos/README.md). It uses the same
+hosted web app and opens `blog <username>` previews in the system default browser.
+Build it with `cd macos && bash build.sh`.
+
 ## Project Structure
 
 ```
