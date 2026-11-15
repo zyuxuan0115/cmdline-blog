@@ -1,26 +1,11 @@
 import Foundation
 
 struct Site {
-    // The existing public app URL in register.html.
+    // Only blog previews use the public website. The editor runs locally.
     static let productionURL = URL(string: "https://kate0115.cc/apps/cmdline-blog/")!
     let url: URL
 
-    init(address: String? = nil) throws {
-        guard let address else {
-            url = Self.productionURL
-            return
-        }
-        guard let candidate = URL(string: address),
-              let host = candidate.host,
-              candidate.user == nil, candidate.password == nil,
-              candidate.query == nil, candidate.fragment == nil,
-              candidate.scheme == "https" ||
-                (candidate.scheme == "http" && ["localhost", "127.0.0.1", "[::1]"].contains(host))
-        else { throw ConfigurationError.invalidURL }
-        url = candidate.path.isEmpty || candidate.pathExtension.isEmpty
-            ? (candidate.absoluteString.hasSuffix("/") ? candidate : candidate.appendingPathComponent(""))
-            : candidate
-    }
+    init(url: URL) { self.url = url }
 
     func contains(_ candidate: URL) -> Bool {
         let directory = url.hasDirectoryPath ? url : url.deletingLastPathComponent()
@@ -39,10 +24,14 @@ struct Site {
             (isBlog(candidate) || !contains(candidate))
     }
 
-    enum ConfigurationError: LocalizedError {
-        case invalidURL
-        var errorDescription: String? {
-            "Use an HTTPS app URL, or HTTP on localhost for development."
+    func browserURL(for candidate: URL) -> URL? {
+        if isBlog(candidate) {
+            var result = URLComponents(url: Self.productionURL.appendingPathComponent("blog.html"), resolvingAgainstBaseURL: false)
+            let source = URLComponents(url: candidate, resolvingAgainstBaseURL: false)
+            result?.percentEncodedQuery = source?.percentEncodedQuery
+            result?.percentEncodedFragment = source?.percentEncodedFragment
+            return result?.url
         }
+        return opensInBrowser(candidate) ? candidate : nil
     }
 }

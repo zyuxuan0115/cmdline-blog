@@ -1,0 +1,89 @@
+[
+  {
+    "file": "marked.min.js",
+    "url": "https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js",
+    "original": "https://cdn.jsdelivr.net/npm/marked/marked.min.js",
+    "sha256": "3e7e7d7feb3e5d58cb6c804f68ab5c24cc7e5eb6270fd6e5cbb9124739217d0c"
+  },
+  {
+    "file": "firebase-app-compat.js",
+    "url": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
+    "original": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
+    "sha256": "24a1fd90a9424647636669f59013201ba385eff82a58f88c76a7d400d4d71139"
+  },
+  {
+    "file": "firebase-auth-compat.js",
+    "url": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js",
+    "original": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js",
+    "sha256": "277f6ef70525168247921e7a51fe995ecc66f9c3cf56c97f0d2bc262f74b5906"
+  },
+  {
+    "file": "firebase-firestore-compat.js",
+    "url": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js",
+    "original": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js",
+    "sha256": "25133ac64bef210c19384ed72eafdec440c27c02a6b48e9d2b6b48bf7b00ad04"
+  },
+  {
+    "file": "firebase-functions-compat.js",
+    "url": "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js",
+    "original": "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js",
+    "sha256": "cfea1ff0fcd0399abc8aa89dc395c3faf127a92e751cb38bc57c623b68d9e5da"
+  },
+  {
+    "file": "codemirror.min.css",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css",
+    "sha256": "c176f3906cb706151ddbfe37b7856f17b4e612c6c6583a56a290561c9f5996a7"
+  },
+  {
+    "file": "dialog.css",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/dialog/dialog.css",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/dialog/dialog.css",
+    "sha256": "5df690d771f12118348562dd2a90060433ae2edeccd0908abcaa4480b1e3e468"
+  },
+  {
+    "file": "codemirror.min.js",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js",
+    "sha256": "d230e4614ed889647dc357e34f343bde5669ca37a0a14d05121e04d0d5ae435a"
+  },
+  {
+    "file": "dialog.js",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/dialog/dialog.js",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/dialog/dialog.js",
+    "sha256": "fd8c925fcc25357617faff21220c026bb91a617b995268d96c5d39232fd42833"
+  },
+  {
+    "file": "searchcursor.js",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/search/searchcursor.js",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/search/searchcursor.js",
+    "sha256": "2c0b8cd8fe7ca5ca2253f4aacc914b390bff5b3cac3475df66c43a9ea8c8ccbe"
+  },
+  {
+    "file": "matchbrackets.js",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.js",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.js",
+    "sha256": "9d0e5ee4c199fcbe487a901860c2cf7d007263852677dd5858098fcaa8580f1e"
+  },
+  {
+    "file": "vim.js",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/keymap/vim.js",
+    "original": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/keymap/vim.js",
+    "sha256": "c8124370e0ba7e76d5cde3c18d257c5c99e5578d6505f0eeaab5c791673c40e8"
+  },
+  {
+    "file": "firebase-LICENSE",
+    "url": "https://raw.githubusercontent.com/firebase/firebase-js-sdk/main/LICENSE",
+    "sha256": "065e45b5674f9bf76670496e5472611b3fbd87fbeaf99336725430a9909cb687"
+  },
+  {
+    "file": "codemirror-LICENSE",
+    "url": "https://cdn.jsdelivr.net/npm/codemirror@5.65.16/LICENSE",
+    "sha256": "168a4becc968f5001e2ee2e0291b6e4daabafc1894a11ade1e11d56e96096e07"
+  },
+  {
+    "file": "marked-LICENSE",
+    "url": "https://cdn.jsdelivr.net/npm/marked@15.0.12/LICENSE.md",
+    "sha256": "8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c"
+  }
+]

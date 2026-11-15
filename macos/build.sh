@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 # Keep SwiftPM's caches inside this directory, including in restricted workspaces.
 export CLANG_MODULE_CACHE_PATH="$PWD/.build/clang-cache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/module-cache"
+python3 prepare_web.py
 swift build -c release --disable-sandbox --cache-path "$PWD/.build/cache" "$@"
 bin_dir=$(swift build -c release --disable-sandbox --cache-path "$PWD/.build/cache" --show-bin-path "$@")
 staging=$(mktemp -d "${TMPDIR:-/tmp}/cmdline-blog.XXXXXX")

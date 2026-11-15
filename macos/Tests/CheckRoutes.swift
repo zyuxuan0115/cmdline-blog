@@ -1,42 +1,53 @@
 import Foundation
 
-// A standalone harness also runs with Command Line Tools, which may omit Testing.
+// Command Line Tools may omit Testing; this standalone harness also exercises
+// the real HTTP listener, rather than only checking the response builder.
 @main
 enum CheckRoutes {
-    static func main() throws {
-        let site = try Site()
-        precondition(site.url.absoluteString == "https://kate0115.cc/apps/cmdline-blog/")
-        let blog = URL(string: "blog.html?u=someone%20else&p=post&t=swift", relativeTo: site.url)!.absoluteURL
+    static func main() async throws {
+        let site = Site(url: URL(string: "http://127.0.0.1:47836/")!)
+        let blog = URL(string: "blog.html?u=someone%20else%26name&p=post&t=swift#comments", relativeTo: site.url)!.absoluteURL
+        precondition(site.contains(site.url))
         precondition(site.isBlog(blog))
-        precondition(site.opensInBrowser(blog))
-        precondition(URLComponents(url: blog, resolvingAgainstBaseURL: false)?.queryItems?.first?.value == "someone else")
         precondition(!site.opensInBrowser(site.url))
+        let preview = site.browserURL(for: blog)!
+        precondition(preview.absoluteString == "https://kate0115.cc/apps/cmdline-blog/blog.html?u=someone%20else%26name&p=post&t=swift#comments")
+        precondition(site.browserURL(for: site.url) == nil)
+        precondition(!site.contains(URL(string: "http://127.0.0.1:47837/index.html")!))
+        precondition(site.browserURL(for: URL(string: "https://elsewhere.com/")!)?.host == "elsewhere.com")
+        precondition(site.browserURL(for: URL(string: "javascript:alert(1)")!) == nil)
+        precondition(site.browserURL(for: URL(string: "file:///tmp/test.html")!) == nil)
 
-        let nested = try Site(address: "https://example.com/apps/blog/")
-        precondition(nested.contains(URL(string: "https://example.com/apps/blog/index.html")!))
-        precondition(!nested.contains(URL(string: "https://example.com/apps/blog-elsewhere/index.html")!))
-        precondition(!nested.contains(URL(string: "https://example.com/apps/blog/../admin/")!))
-        precondition(!nested.contains(URL(string: "https://example.com:8443/apps/blog/")!))
-        precondition(nested.opensInBrowser(URL(string: "https://elsewhere.com/")!))
-        precondition(!nested.opensInBrowser(URL(string: "javascript:alert(1)")!))
-        precondition(!nested.opensInBrowser(URL(string: "file:///tmp/test.html")!))
+        let fixture = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let root = fixture.appendingPathComponent("Web")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        try Data("<h1>Bundled UI</h1>".utf8).write(to: root.appendingPathComponent("index.html"))
+        try Data("secret".utf8).write(to: fixture.appendingPathComponent("secret.html"))
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("link.html"), withDestinationURL: fixture.appendingPathComponent("secret.html"))
 
-        let local = try Site(address: "http://localhost:8080")
-        let localBlog = URL(string: "blog.html?u=test", relativeTo: local.url)!.absoluteURL
-        precondition(localBlog.absoluteString == "http://localhost:8080/blog.html?u=test")
-        precondition(local.isBlog(localBlog))
-        let withoutSlash = try Site(address: "https://example.com/apps/blog")
-        precondition(withoutSlash.url.absoluteString == "https://example.com/apps/blog/")
-
-        for address in ["http://example.com/", "file:///tmp/index.html", "javascript:alert(1)",
-                        "https://user:pass@example.com/", "https://example.com/?secret=123"] {
-            do {
-                _ = try Site(address: address)
-                fatalError("Accepted invalid URL: \(address)")
-            } catch Site.ConfigurationError.invalidURL {
-                // Expected.
-            }
+        let assets = WebAssets(root: root, origin: site.url)
+        func response(_ target: String, method: String = "GET", host: String = "127.0.0.1:47836", extra: String = "") -> WebAssets.Response {
+            assets.response(for: Data("\(method) \(target) HTTP/1.1\r\nHost: \(host)\r\n\(extra)\r\n".utf8))
         }
-        print("Passed macOS URL routing checks.")
+        precondition(response("/").status == 200)
+        precondition(response("/index.html?v=8").status == 200)
+        precondition(response("/missing.js").status == 404)
+        precondition(response("/../secret.html").status == 403)
+        precondition(response("/%2e%2e/secret.html").status == 403)
+        precondition(response("/link.html").status == 403)
+        precondition(response("/", host: "example.com").status == 403)
+        precondition(response("/", extra: "Origin: https://example.com\r\n").status == 403)
+        precondition(response("/", method: "POST").status == 405)
+        let head = response("/", method: "HEAD")
+        precondition(head.status == 200 && !String(decoding: head.data, as: UTF8.self).contains("<h1>"))
+
+        let server = try LocalServer(root: root, port: 47837)
+        try await server.start()
+        defer { server.stop() }
+        let (body, result) = try await URLSession.shared.data(from: server.url)
+        precondition((result as? HTTPURLResponse)?.statusCode == 200)
+        precondition(String(decoding: body, as: UTF8.self) == "<h1>Bundled UI</h1>")
+        print("Passed URL mapping, asset isolation, and real loopback HTTP checks.")
     }
 }

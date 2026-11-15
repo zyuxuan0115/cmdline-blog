@@ -15,9 +15,7 @@ final class BrowserController: NSViewController, WKNavigationDelegate, WKUIDeleg
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
-        let resources = Bundle.main.url(forResource: "CmdLineBlog_CmdLineBlog", withExtension: "bundle")
-            .flatMap { Bundle(url: $0) } ?? Bundle.module
-        guard let scriptURL = resources.url(forResource: "desktop", withExtension: "js") else {
+        guard let scriptURL = AppResources.bundle.url(forResource: "desktop", withExtension: "js") else {
             throw CocoaError(.fileNoSuchFile)
         }
         let script = try String(contentsOf: scriptURL, encoding: .utf8)
@@ -64,12 +62,13 @@ final class BrowserController: NSViewController, WKNavigationDelegate, WKUIDeleg
         guard message.frameInfo.isMainFrame,
               let source = message.frameInfo.request.url, site.contains(source),
               let address = message.body as? String,
-              let url = URL(string: address), site.isBlog(url)
+              let url = URL(string: address), site.isBlog(url),
+              let publicURL = site.browserURL(for: url)
         else {
             replyHandler(nil, "Invalid blog URL.")
             return
         }
-        replyHandler(NSWorkspace.shared.open(url), nil)
+        replyHandler(NSWorkspace.shared.open(publicURL), nil)
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
@@ -82,7 +81,9 @@ final class BrowserController: NSViewController, WKNavigationDelegate, WKUIDeleg
         // window. Its navigation is then handled below by the child's delegate.
         if action.targetFrame == nil && !isPopup { decisionHandler(.allow); return }
         if site.opensInBrowser(url) || (isPopup && ["https", "http"].contains(url.scheme ?? "")) {
-            if !NSWorkspace.shared.open(url) { showError("Could not open the default browser.") }
+            if let destination = site.browserURL(for: url) {
+                if !NSWorkspace.shared.open(destination) { showError("Could not open the default browser.") }
+            }
             decisionHandler(.cancel)
             popups.removeAll { $0 === webView }
         } else if site.contains(url) || url.absoluteString == "about:blank" {

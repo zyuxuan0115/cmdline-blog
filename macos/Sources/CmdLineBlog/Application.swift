@@ -13,12 +13,19 @@ enum Application {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
+    private var server: LocalServer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installMenu()
+        Task { await launch() }
+    }
+
+    private func launch() async {
         do {
-            let site = try Site(address: ProcessInfo.processInfo.environment["CMDLINE_BLOG_URL"])
-            let controller = try BrowserController(site: site)
+            let server = try LocalServer(root: AppResources.webRoot())
+            self.server = server
+            try await server.start()
+            let controller = try BrowserController(site: Site(url: server.url))
             let window = NSWindow(contentViewController: controller)
             window.title = "CmdLine Blog"
             window.setContentSize(NSSize(width: 1280, height: 820))
@@ -34,6 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.terminate(nil)
         }
     }
+
+    func applicationWillTerminate(_ notification: Notification) { server?.stop() }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 

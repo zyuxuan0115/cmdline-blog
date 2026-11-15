@@ -8,7 +8,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "CmdLineBlog",
-            resources: [.copy("Resources/desktop.js")],
+            resources: [.copy("Resources/desktop.js"), .copy("Resources/Web")],
             swiftSettings: [
                 .defaultIsolation(MainActor.self),
                 .enableUpcomingFeature("NonisolatedNonsendingByDefault")
